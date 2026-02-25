@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidence {{ evidence.case_number }} - CoC System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('dashboard') }}" class="back-link">← BACK</a>
+            <span class="brand-icon">🔐</span>
+            <span class="brand-text">CHAIN OF CUSTODY</span>
+        </div>
+        <div class="nav-user">
+            <span class="user-role">{{ user.role }}</span>
+            <span class="user-name">{{ user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">LOGOUT</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="evidence-detail">
+            <div class="detail-header">
+                <div>
+                    <h1>{{ evidence.case_number }}</h1>
+                    <span class="status-badge status-{{ evidence.status|lower }}">{{ evidence.status }}</span>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <!-- Evidence Information -->
+                <div class="detail-section">
+                    <h2>EVIDENCE INFORMATION</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Description</span>
+                            <span class="info-value">{{ evidence.description }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">{{ evidence.evidence_type }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Current Custodian</span>
+                            <span class="info-value" style="color: var(--accent-green); font-weight: bold;">📍 {{
+                                evidence.current_custodian }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created At</span>
+                            <span class="info-value">{{ evidence.created_at }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created By</span>
+                            <span class="info-value">{{ evidence.created_by }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hash Information -->
+                <div class="detail-section">
+                    <h2>CRYPTOGRAPHIC HASH (SHA-256)</h2>
+                    <div class="hash-section">
+                        <div class="hash-item">
+                            <span class="hash-label">ORIGINAL HASH</span>
+                            <code class="hash-value">{{ evidence.original_hash }}</code>
+                        </div>
+                        <div class="hash-item">
+                            <span class="hash-label">CURRENT HASH</span>
+                            <code
+                                class="hash-value {% if evidence.original_hash != evidence.current_hash %}hash-mismatch{% endif %}">{{ evidence.current_hash }}</code>
+                        </div>
+                        <div id="verifyResult" class="verify-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evidence File Viewer (if file exists) -->
+            {% if file_content %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>📄 EVIDENCE FILE CONTENT</h2>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <div id="fileContentDisplay"
+                        style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 4px; font-family: 'Courier New', monospace; white-space: pre-wrap; color: var(--text-primary); border: 1px solid var(--border-color); margin-bottom: 1rem;">
+                        {{ file_content }}</div>
+
+                    <!-- Edit mode (for tampering demo) -->
+                    <div id="fileEditMode" style="display: none; margin-bottom: 1rem;">
+                        <textarea id="fileContentEdit"
+                            style="width: 100%; min-height: 200px; background: rgba(0,0,0,0.3); color: var(--text-primary); padding: 1rem; border: 1px solid var(--accent-cyan); border-radius: 4px; font-family: 'Courier New', monospace; resize: vertical;">{{ file_content }}</textarea>
+                        <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                            <button class="btn-primary" onclick="saveFileEdit({{ evidence.id }})">💾 SAVE
+                                CHANGES</button>
+                            <button class="btn-secondary" onclick="cancelFileEdit()">CANCEL</button>
+                        </div>
+                    </div>
+
+                    <button id="editFileBtn" class="btn-action" onclick="enableFileEdit()">
+                        ✏️ EDIT FILE
+                    </button>
+                    <small style="display: block; margin-top: 0.5rem; color: var(--text-muted);">
+                        For demo: Edit file content to simulate tampering, then verify integrity
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="action-buttons">
+                {% if user.permissions.verify %}
+                <button class="btn-action" onclick="verifyIntegrity({{ evidence.id }})">
+                    🔍 VERIFY INTEGRITY
+                </button>
+                {% endif %}
+                {% if user.permissions.transfer and evidence.status != 'Sealed' %}
+                <button class="btn-action" onclick="showTransferModal()">
+                    📤 TRANSFER CUSTODY
+                </button>
+                {% endif %}
+                {% if user.permissions.seal and evidence.status != 'Sealed' %}
+                <button class="btn-action" onclick="sealEvidence({{ evidence.id }})">
+                    🔒 SEAL EVIDENCE
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Chain of Custody Timeline -->
+            {% if user.permissions.view_all_logs %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>CHAIN OF CUSTODY</h2>
+                </div>
+                <div class="timeline">
+                    {% for log in custody_log %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <span class="timeline-action">{{ log.action }}</span>
+                                <span class="timeline-time">{{ log.timestamp }}</span>
+                            </div>
+                            <div class="timeline-meta">
+                                <span class="timeline-user">BY: {{ log.performed_by }}</span>
+                                {% if log.transferred_to %}
+                                <span class="timeline-user" style="color: var(--accent-green);">→ TO: {{
+                                    log.transferred_to }}</span>
+                                {% endif %}
+                                {% if log.hash_verified %}
+                                <span class="timeline-hash hash-{{ log.hash_verified|lower }}">
+                                    HASH: {{ log.hash_verified }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if log.notes %}
+                            <p class="timeline-notes">{{ log.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Non-Auditor users see limited info -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>CHAIN OF CUSTODY</h2>
+                </div>
+                <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                    <p style="font-size: 1.1rem; margin-bottom: 1rem;">🔒 RESTRICTED ACCESS</p>
+                    <p style="font-size: 0.9rem;">Full chain of custody timeline is restricted to Auditors and System
+                        Administrators.</p>
+                    <p style="font-size: 0.9rem; margin-top: 1rem; color: var(--text-secondary);">
+                        Current Status: <strong style="color: var(--accent-blue);">{{ evidence.status }}</strong><br>
+                        Current Custodian: <strong style="color: var(--accent-green);">{{ evidence.current_custodian
+                            }}</strong>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div id="transferModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>TRANSFER EVIDENCE CUSTODY</h2>
+                <span class="modal-close" onclick="hideTransferModal()">&times;</span>
+            </div>
+            <form id="transferForm" onsubmit="transferEvidence(event, {{ evidence.id }})">
+                <div class="form-group">
+                    <label>TRANSFER TO *</label>
+                    <select id="transfer_to" required>
+                        <option value="">-- Select User --</option>
+                        {% for user in coc_users %}
+                        <option value="{{ user.username }}">{{ user.username }} ({{ user.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>NOTES (Optional)</label>
+                    <textarea id="transfer_notes" rows="2" placeholder="Reason for transfer (optional)"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideTransferModal()">CANCEL</button>
+                    <button type="submit" class="btn-primary">TRANSFER</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

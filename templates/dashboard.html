@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidence Dashboard - CoC System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">🔐</span>
+            <span class="brand-text">CHAIN OF CUSTODY</span>
+        </div>
+        <div class="nav-user">
+            <span class="user-role">{{ user.role }}</span>
+            <span class="user-name">{{ user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">LOGOUT</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>EVIDENCE REGISTRY</h1>
+            {% if user.permissions.create %}
+            <button class="btn-primary" onclick="showCreateModal()">+ NEW EVIDENCE</button>
+            {% endif %}
+        </div>
+
+        <div class="evidence-grid">
+            {% if evidence_list %}
+            {% for evidence in evidence_list %}
+            <div class="evidence-card"
+                onclick="window.location.href='{{ url_for('evidence_detail', evidence_id=evidence.id) }}'">
+                <div class="card-header">
+                    <span class="case-number">{{ evidence.case_number }}</span>
+                    <span class="status-badge status-{{ evidence.status|lower }}">{{ evidence.status }}</span>
+                </div>
+                <div class="card-body">
+                    <p class="evidence-desc">{{ evidence.description }}</p>
+                    <div class="evidence-meta">
+                        <span class="meta-item">
+                            <span class="meta-label">TYPE:</span>
+                            <span class="meta-value">{{ evidence.evidence_type }}</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-label">CREATED:</span>
+                            <span class="meta-value">{{ evidence.created_at[:10] }}</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="hash-preview">{{ evidence.current_hash[:16] }}...</span>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <p>No evidence registered yet</p>
+                <p class="empty-hint">Click "NEW EVIDENCE" to get started</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Create Evidence Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>REGISTER NEW EVIDENCE</h2>
+                <span class="modal-close" onclick="hideCreateModal()">&times;</span>
+            </div>
+            <form id="createForm" onsubmit="createEvidence(event)">
+                <div class="form-group">
+                    <label>CASE NUMBER</label>
+                    <input type="text" id="case_number" required placeholder="e.g., CASE-2026-001">
+                </div>
+                <div class="form-group">
+                    <label>DESCRIPTION</label>
+                    <textarea id="description" required rows="3" placeholder="Brief description of evidence"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>EVIDENCE TYPE</label>
+                    <select id="evidence_type" required>
+                        <option value="">-- Select Type --</option>
+                        <option value="Physical">Physical</option>
+                        <option value="Digital">Digital</option>
+                        <option value="Document">Document</option>
+                        <option value="Biological">Biological</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>EVIDENCE FILE (Optional .txt file)</label>
+                    <input type="file" id="evidence_file" accept=".txt" />
+                    <small style="color: var(--text-muted); font-size: 0.8rem;">Upload a .txt file containing evidence
+                        details (e.g., financial records, witness statements)</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideCreateModal()">CANCEL</button>
+                    <button type="submit" class="btn-primary">REGISTER</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

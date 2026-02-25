@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoC System - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="brand-icon">🔐</div>
+                <h1>CHAIN OF CUSTODY</h1>
+                <p>Evidence Management System</p>
+            </div>
+
+            <form method="POST">
+                {% if error %}
+                <div class="error-message">{{ error }}</div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label for="username">USERNAME</label>
+                    <input type="text" id="username" name="username" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">PASSWORD</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <button type="submit" class="btn-primary">ACCESS SYSTEM</button>
+            </form>
+
+            <div class="demo-credentials">
+                <p class="demo-title">DEMO CREDENTIALS (5 ROLES)</p>
+                <div class="credential-grid">
+                    <div class="credential-item">
+                        <span class="role">System Admin</span>
+                        <span class="user">sysadmin / admin123</span>
+                    </div>
+                    <div class="credential-item">
+                        <span class="role">Evidence Manager</span>
+                        <span class="user">manager / manager123</span>
+                    </div>
+                    <div class="credential-item">
+                        <span class="role">Investigator</span>
+                        <span class="user">investigator / inv123</span>
+                    </div>
+                    <div class="credential-item">
+                        <span class="role">Forensic Analyst</span>
+                        <span class="user">analyst / analyst123</span>
+                    </div>
+                    <div class="credential-item">
+                        <span class="role">Auditor (Read-Only)</span>
+                        <span class="user">auditor / audit123</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
