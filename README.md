@@ -150,11 +150,11 @@ Evidential/
 
 <div align="center">
 
-### 🎓 M.Tech Minor Project
+⭐ **If you found this useful, star this repo!** ⭐
 
-**Built with** ❤️ **using Python, Flask & SHA-256**
-
+[![GitHub stars](https://img.shields.io/github/stars/TheWildEye/Evidential?style=for-the-badge&color=39ff14&labelColor=000000)](https://github.com/TheWildEye/Evidential/stargazers)
 [![GitHub](https://img.shields.io/badge/View_on-GitHub-181717?style=for-the-badge&logo=github)](https://github.com/TheWildEye/Evidential)
-[![Python](https://img.shields.io/badge/Made_with-Python-39ff14?style=for-the-badge&logo=python&logoColor=white&labelColor=000000)](https://python.org)
+
+**Made by [Vyom Nagpal](https://github.com/TheWildEye) — M.Tech Cybersecurity**
 
 </div>
