@@ -112,7 +112,7 @@
     <div id="captureModal" class="modal">
         <div class="modal-content modal-capture">
             <div class="modal-header">
-                <h2>📷 Live Evidence Capture</h2>
+                <h2>Live Evidence Capture</h2>
                 <span class="modal-close" onclick="hideCaptureModal()">&times;</span>
             </div>
 
@@ -130,17 +130,16 @@
                     </div>
                     <!-- Shown when camera permission is denied or unavailable -->
                     <div id="cameraFailedOverlay" class="camera-failed-overlay" style="display:none;">
-                        <p class="cam-fail-icon">📷</p>
                         <p class="cam-fail-msg">Camera unavailable or not permitted</p>
-                        <p class="cam-gps-note">⚙️ Enable camera in browser settings, then reload</p>
+                        <p class="cam-gps-note">Enable camera access in browser settings, then reload</p>
                         <!-- PRIMARY: gallery picker always works -->
-                        <label class="btn-file-pick-primary" for="captureFileFallback">📁 Pick Photo from Gallery</label>
+                        <label class="btn-file-pick-primary" for="captureFileFallback">Pick Photo from Gallery</label>
                     </div>
                 </div>
 
                 <div class="gps-device-bar">
-                    <span id="gpsStatusPill" class="gps-pill gps-fetching">📍 Fetching GPS…</span>
-                    <span id="gpsSettingsHint" class="gps-settings-hint" style="display:none;">⚙️ Enable location in browser settings</span>
+                    <span id="gpsStatusPill" class="gps-pill gps-fetching">Fetching GPS...</span>
+                    <span id="gpsSettingsHint" class="gps-settings-hint" style="display:none;">Enable location in browser settings</span>
                     <span id="deviceInfoChip" class="device-chip"></span>
                 </div>
 
@@ -176,7 +175,7 @@
                         </select>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn-secondary" onclick="retakeCapture()">↩ Retake</button>
+                        <button type="button" class="btn-secondary" onclick="retakeCapture()">Retake</button>
                         <button type="submit" class="btn-primary" id="captureSubmitBtn">Register Evidence</button>
                     </div>
                 </form>

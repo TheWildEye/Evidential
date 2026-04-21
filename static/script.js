@@ -307,12 +307,12 @@ function startGeolocation() {
     const pill = document.getElementById('gpsStatusPill');
 
     if (!navigator.geolocation) {
-        pill.textContent = '⚠️ No GPS';
+        pill.textContent = 'No GPS';
         pill.className = 'gps-pill gps-denied';
         return;
     }
 
-    pill.textContent = '📍 Fetching…';
+    pill.textContent = 'Fetching GPS...';
     pill.className = 'gps-pill gps-fetching';
 
     // Clear any existing watch before starting a new one
@@ -335,14 +335,14 @@ function startGeolocation() {
             const lat = pos.coords.latitude.toFixed(4);
             const lng = pos.coords.longitude.toFixed(4);
             const acc = Math.round(pos.coords.accuracy || 0);
-            pill.textContent = `📍 ${lat}, ${lng}`;
+            pill.textContent = `${lat}, ${lng}`;
             pill.title = `GPS acquired ±${acc}m`;
             pill.className = 'gps-pill gps-acquired';
             const hint = document.getElementById('gpsSettingsHint');
             if (hint) hint.style.display = 'none';
         },
         err => {
-            pill.textContent = '⚠️ GPS denied';
+            pill.textContent = 'GPS denied';
             pill.className = 'gps-pill gps-denied';
             const hint = document.getElementById('gpsSettingsHint');
             if (hint) hint.style.display = 'inline';
@@ -453,20 +453,20 @@ function showPreviewStep() {
     const netStr = [cli.connection_type, cli.connection_effectiveType, cli.connection_downlink_mbps ? `${cli.connection_downlink_mbps} Mbps` : null]
         .filter(Boolean).join(' / ') || 'Unknown';
     const battStr = cli.battery_level_pct != null
-        ? `${cli.battery_level_pct}% ${cli.battery_charging ? '⚡ Charging' : '🔋'}`
+        ? `${cli.battery_level_pct}% ${cli.battery_charging ? 'Charging' : ''}`
         : null;
     const rows = [
-        ['📅 Captured',    cli.captureTimestamp],
-        ['🌐 Timezone',    cli.timezone],
-        ['📱 OS',          cli.os || 'Unknown'],
-        cli.deviceModel ? ['📲 Device',  cli.deviceModel] : null,
-        ['📡 Network',     netStr],
-        battStr ? ['🔋 Battery',    battStr] : null,
-        ['📍 GPS',         gps
+        ['Captured',  cli.captureTimestamp],
+        ['Timezone',  cli.timezone],
+        ['OS',        cli.os || 'Unknown'],
+        cli.deviceModel ? ['Device', cli.deviceModel] : null,
+        ['Network',   netStr],
+        battStr ? ['Battery', battStr] : null,
+        ['GPS',       gps
             ? `${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)} (±${Math.round(gps.accuracy_m || 0)}m)`
             : 'Not available'],
-        cli.maxTouchPoints > 0 ? ['👆 Touch',  `${cli.maxTouchPoints} points`] : null,
-        cli.devicePixelRatio > 1 ? ['🖥 DPR', `${cli.devicePixelRatio}x`] : null,
+        cli.maxTouchPoints > 0 ? ['Touch', `${cli.maxTouchPoints} points`] : null,
+        cli.devicePixelRatio > 1 ? ['DPR', `${cli.devicePixelRatio}x`] : null,
     ].filter(Boolean);
     document.getElementById('capturedMetaStrip').innerHTML = rows.map(([k, v]) =>
         `<div class="meta-strip-row">
@@ -492,7 +492,7 @@ function retakeCapture() {
     _capturedBlob = null;
     document.getElementById('captureStep1').style.display = '';
     document.getElementById('captureStep2').style.display = 'none';
-    document.getElementById('gpsStatusPill').textContent = '📍 Fetching GPS…';
+    document.getElementById('gpsStatusPill').textContent = 'Fetching GPS...';
     document.getElementById('gpsStatusPill').className = 'gps-pill gps-fetching';
     startCamera();
     startGeolocation();
@@ -519,7 +519,7 @@ function hideCaptureModal() {
     document.getElementById('captureStep1').style.display = '';
     document.getElementById('captureStep2').style.display = 'none';
     const pill = document.getElementById('gpsStatusPill');
-    pill.textContent = '📍 Fetching GPS…';
+    pill.textContent = 'Fetching GPS...';
     pill.className   = 'gps-pill gps-fetching';
     _capturedBlob = null;
     _gpsData      = null;
