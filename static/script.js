@@ -335,7 +335,7 @@ function startGeolocation() {
             const lat = pos.coords.latitude.toFixed(4);
             const lng = pos.coords.longitude.toFixed(4);
             const acc = Math.round(pos.coords.accuracy || 0);
-            pill.textContent = `${lat}, ${lng}`;
+            pill.textContent = `📍 GPS — ${lat}, ${lng}`;
             pill.title = `GPS acquired ±${acc}m`;
             pill.className = 'gps-pill gps-acquired';
             const hint = document.getElementById('gpsSettingsHint');
