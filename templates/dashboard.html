@@ -130,11 +130,13 @@
                     </div>
                     <!-- Shown when camera permission is denied or unavailable -->
                     <div id="cameraFailedOverlay" class="camera-failed-overlay" style="display:none;">
-                        <p class="cam-fail-icon">🚫</p>
-                        <p class="cam-fail-msg">Camera access was denied or unavailable</p>
-                        <button type="button" class="btn-retry-cam" onclick="retryCamera()">🔄 Retry Camera Access</button>
-                        <div class="cam-fail-divider">— or —</div>
-                        <label class="btn-file-pick" for="captureFileFallback">📁 Pick from Gallery</label>
+                        <p class="cam-fail-icon">📷</p>
+                        <p class="cam-fail-msg">Camera unavailable or not permitted</p>
+                        <p class="cam-gps-note">GPS is optional — you can still capture evidence</p>
+                        <!-- PRIMARY: gallery picker always works -->
+                        <label class="btn-file-pick-primary" for="captureFileFallback">📁 Pick Photo from Gallery</label>
+                        <div class="cam-fail-divider">— or try camera again —</div>
+                        <button type="button" class="btn-retry-cam-sm" onclick="retryCamera()">🔄 Retry Camera</button>
                     </div>
                 </div>
 
