@@ -472,9 +472,9 @@ function captureSnapshot() {
     canvas.height = video.videoHeight || 720;
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Refresh metadata timestamp at the exact moment of capture
+    // Refresh metadata at exact moment of capture; battery enriches in background
     _clientMeta = collectClientMetadata();
-    await _enrichWithBattery(_clientMeta);
+    _enrichWithBattery(_clientMeta);  // no await — runs async in background
 
     canvas.toBlob(blob => {
         _capturedBlob = blob;
