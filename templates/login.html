@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — Chain of Custody</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-box">
+                <div class="login-brand">
+                    <h1>Chain of Custody</h1>
+                    <p>Digital Evidence Management System</p>
+                </div>
+
+                <form method="POST" class="login-form">
+                    {% if error %}
+                    <div class="error-msg">{{ error }}</div>
+                    {% endif %}
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required autofocus placeholder="Enter username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="Enter password">
+                    </div>
+                    <button type="submit" class="btn-login">Login</button>
+                </form>
+
+                <div class="demo-credentials">
+                    <p class="demo-title">Demo Credentials</p>
+                    <div class="credential-grid">
+                        <div class="credential-item">
+                            <span class="role">System Admin</span>
+                            <span class="user">admin / admin123</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="role">Field Officer</span>
+                            <span class="user">officer / officer123</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="role">Evidence Custodian</span>
+                            <span class="user">custodian / custody123</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="role">Forensic Analyst</span>
+                            <span class="user">analyst / analyst123</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="role">Court Auditor</span>
+                            <span class="user">auditor / audit123</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

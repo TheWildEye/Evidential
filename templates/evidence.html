@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ evidence.case_number }} — Chain of Custody</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('dashboard') }}" class="back-link">&#8592; Registry</a>
+            <span class="brand-text">Chain of Custody</span>
+        </div>
+        <div class="nav-user">
+            <span class="user-role">{{ user.role }}</span>
+            <span class="user-name">{{ user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Sign Out</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="evidence-detail">
+            <div class="detail-header">
+                <h1>{{ evidence.case_number }}</h1>
+                <span class="status-badge status-{{ evidence.status|lower }}">{{ evidence.status }}</span>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h2>Evidence Information</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Description</span>
+                            <span class="info-value">{{ evidence.description }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">{{ evidence.evidence_type }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Current Custodian</span>
+                            <span class="info-value" style="color: var(--green); font-weight: 600;">{{ evidence.current_custodian }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created At</span>
+                            <span class="info-value">{{ evidence.created_at }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created By</span>
+                            <span class="info-value">{{ evidence.created_by }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h2>Cryptographic Hash (SHA-256)</h2>
+                    <div class="hash-section">
+                        <div class="hash-item">
+                            <span class="hash-label">Original Hash</span>
+                            <code class="hash-value">{{ evidence.original_hash }}</code>
+                        </div>
+                        <div class="hash-item">
+                            <span class="hash-label">Current Hash</span>
+                            {% if evidence.current_hash == 'FILE_MISSING' %}
+                            <code class="hash-value hash-mismatch">File not found on disk — renamed, moved, or deleted</code>
+                            {% else %}
+                            <code class="hash-value {% if evidence.original_hash != evidence.current_hash %}hash-mismatch{% endif %}">{{ evidence.current_hash }}</code>
+                            {% endif %}
+                        </div>
+                        <div id="verifyResult" class="verify-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            {% if device_metadata %}
+            <div class="card" style="margin-bottom: 1.25rem;">
+                <div class="card-header">
+                    <h2>📱 Device &amp; Capture Metadata</h2>
+                </div>
+                <div style="padding: 1.25rem;">
+                    <div class="device-meta-grid">
+
+                        {% if device_metadata.exif %}
+                        {% set exif = device_metadata.exif %}
+                        <div class="device-meta-section">
+                            <div class="device-meta-title">📷 EXIF (from image)</div>
+
+                            {% if exif.Make or exif.Model %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Device</span>
+                                <span class="device-meta-val">{{ exif.get('Make', '') }} {{ exif.get('Model', '') }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.Software %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Software / OS</span>
+                                <span class="device-meta-val">{{ exif.Software }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.DateTimeOriginal %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Capture Time (EXIF)</span>
+                                <span class="device-meta-val mono">{{ exif.DateTimeOriginal }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.get('exif_gps_lat') is not none and exif.get('exif_gps_lat') != '' %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">EXIF GPS</span>
+                                <span class="device-meta-val">
+                                    <a href="https://maps.google.com/?q={{ exif.exif_gps_lat }},{{ exif.exif_gps_lng }}"
+                                       target="_blank" class="gps-link">
+                                        {{ exif.exif_gps_lat }}, {{ exif.exif_gps_lng }} 🗺️
+                                    </a>
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.get('exif_gps_altitude_m') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Altitude</span>
+                                <span class="device-meta-val mono">{{ exif.exif_gps_altitude_m }}m</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.get('exif_gps_timestamp_utc') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">GPS Timestamp</span>
+                                <span class="device-meta-val mono">{{ exif.exif_gps_timestamp_utc }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.FocalLength %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Focal Length</span>
+                                <span class="device-meta-val mono">{{ exif.FocalLength }}mm</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.ISOSpeedRatings %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">ISO</span>
+                                <span class="device-meta-val mono">{{ exif.ISOSpeedRatings }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if exif.ExposureTime %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Exposure</span>
+                                <span class="device-meta-val mono">{{ exif.ExposureTime }}s</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if device_metadata.client %}
+                        {% set cli = device_metadata.client %}
+                        <div class="device-meta-section">
+                            <div class="device-meta-title">🌐 Capture Context (Browser)</div>
+
+                            {% if cli.captureTimestamp %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Captured At</span>
+                                <span class="device-meta-val mono">{{ cli.captureTimestamp }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.timezone %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Timezone</span>
+                                <span class="device-meta-val">{{ cli.timezone }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.platform %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Platform</span>
+                                <span class="device-meta-val mono">{{ cli.platform }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.gps and cli.gps.get('latitude') is not none %}
+                            {% set gps = cli.gps %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">GPS (Live)</span>
+                                <span class="device-meta-val">
+                                    <a href="https://maps.google.com/?q={{ gps.latitude }},{{ gps.longitude }}"
+                                       target="_blank" class="gps-link">
+                                        {{ "%.5f" | format(gps.latitude) }}, {{ "%.5f" | format(gps.longitude) }} 🗺️
+                                    </a>
+                                    {% if gps.accuracy_m %} (±{{ gps.accuracy_m | round | int }}m){% endif %}
+                                </span>
+                            </div>
+                            {% if gps.get('altitude') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">GPS Altitude</span>
+                                <span class="device-meta-val mono">{{ "%.1f" | format(gps.altitude) }}m</span>
+                            </div>
+                            {% endif %}
+                            {% if gps.get('gps_timestamp') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">GPS Timestamp</span>
+                                <span class="device-meta-val mono">{{ gps.gps_timestamp }}</span>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+
+                            {% if cli.get('connection_effectiveType') or cli.get('connection_type') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Network</span>
+                                <span class="device-meta-val">{{ cli.get('connection_effectiveType') or cli.get('connection_type') }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('screenWidth') and cli.get('screenHeight') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Screen</span>
+                                <span class="device-meta-val mono">{{ cli.screenWidth }}×{{ cli.screenHeight }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('hardwareConcurrency') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">CPU Cores</span>
+                                <span class="device-meta-val mono">{{ cli.hardwareConcurrency }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('deviceMemory') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">RAM</span>
+                                <span class="device-meta-val mono">{{ cli.deviceMemory }}GB</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('language') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Language</span>
+                                <span class="device-meta-val">{{ cli.language }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+                    {% if device_metadata.client and device_metadata.client.get('userAgent') %}
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+                        <span class="info-label">User Agent</span>
+                        <div class="ua-string">{{ device_metadata.client.userAgent }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if file_ext %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Evidence File</h2>
+                </div>
+                <div style="padding: 1.25rem;">
+
+                    {% if file_ext in ['.mp3', '.wav'] %}
+                    <audio controls style="width: 100%; margin-bottom: 1rem;">
+                        <source src="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Audio evidence — SHA-256 hash computed on the original bytes.</p>
+
+                    {% elif file_ext in ['.mp4', '.mov'] %}
+                    <video controls style="width: 100%; max-height: 400px; background: #000; border-radius: var(--radius); margin-bottom: 1rem;">
+                        <source src="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}">
+                        Your browser does not support the video element.
+                    </video>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Video evidence — SHA-256 hash computed on the original bytes.</p>
+
+                    {% elif file_ext in ['.jpg', '.jpeg', '.png', '.gif'] %}
+                    <img src="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}"
+                         style="max-width: 100%; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 1rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Image evidence — SHA-256 hash computed on the original bytes.</p>
+
+                    {% elif file_ext == '.pdf' %}
+                    <a href="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}" target="_blank"
+                       class="btn-secondary" style="display: inline-block; margin-bottom: 1rem;">
+                        Open PDF
+                    </a>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">PDF evidence — SHA-256 hash computed on the original bytes.</p>
+
+                    {% elif file_ext == '.txt' and file_content is not none %}
+                    <div id="fileContentDisplay"
+                        style="background: var(--bg); padding: 1rem; border-radius: var(--radius); font-family: 'Courier New', monospace; white-space: pre-wrap; color: var(--text); border: 1px solid var(--border); font-size: 0.85rem;">{{ file_content }}</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem;">
+                        Text evidence (read-only) — modify the file on disk to simulate tampering, then run integrity check.
+                    </p>
+
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="action-buttons">
+                {% if user.permissions.verify %}
+                <button class="btn-action" onclick="verifyIntegrity({{ evidence.id }})">Verify Integrity</button>
+                <button class="btn-action" onclick="verifyChain({{ evidence.id }})">Verify Chain</button>
+                {% endif %}
+                {% if user.permissions.transfer and evidence.status != 'Sealed' and user.username == evidence.current_custodian %}
+                <button class="btn-action" onclick="showTransferModal()">Transfer Custody</button>
+                {% endif %}
+                {% if user.permissions.seal and evidence.status != 'Sealed' %}
+                <button class="btn-action" onclick="sealEvidence({{ evidence.id }})">Seal Evidence</button>
+                {% endif %}
+            </div>
+            <div id="chainResult" class="verify-result"></div>
+
+            {% if user.permissions.view_all_logs %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Chain of Custody Log</h2>
+                </div>
+                <div class="timeline">
+                    {% for log in custody_log %}
+                    <div class="timeline-item">
+                        {% if log.hash_verified and 'fail' in log.hash_verified|lower %}
+                        <div class="timeline-marker marker-fail"></div>
+                        {% else %}
+                        <div class="timeline-marker"></div>
+                        {% endif %}
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <span class="timeline-action">{{ log.action }}</span>
+                                <span class="timeline-time">{{ log.timestamp }}</span>
+                            </div>
+                            <div class="timeline-meta">
+                                <span class="timeline-user">By: {{ log.performed_by }}</span>
+                                {% if log.transferred_to %}
+                                <span class="timeline-user" style="color: var(--green);">To: {{ log.transferred_to }}</span>
+                                {% endif %}
+                                {% if log.hash_verified %}
+                                <span class="hash-{{ log.hash_verified|lower }}">Hash: {{ log.hash_verified }}</span>
+                                {% endif %}
+                            </div>
+                            {% if log.notes %}
+                            <p class="timeline-notes">{{ log.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Chain of Custody</h2>
+                </div>
+                <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                    <p style="font-size: 0.875rem;">Full chain of custody log is restricted to Auditors and System Administrators.</p>
+                    <p style="font-size: 0.875rem; margin-top: 1rem;">
+                        Status: <strong style="color: var(--text);">{{ evidence.status }}</strong><br>
+                        Custodian: <strong style="color: var(--text);">{{ evidence.current_custodian }}</strong>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="transferModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Transfer Evidence Custody</h2>
+                <span class="modal-close" onclick="hideTransferModal()">&times;</span>
+            </div>
+            <form id="transferForm" onsubmit="transferEvidence(event, {{ evidence.id }})">
+                <div class="form-group">
+                    <label>Transfer To</label>
+                    <select id="transfer_to" required>
+                        <option value="">— Select User —</option>
+                        {% for user in coc_users %}
+                        <option value="{{ user.username }}">{{ user.username }} ({{ user.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="transfer_notes" rows="2" placeholder="Reason for transfer"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideTransferModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Transfer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
