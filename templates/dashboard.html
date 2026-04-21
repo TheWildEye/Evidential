@@ -132,18 +132,15 @@
                     <div id="cameraFailedOverlay" class="camera-failed-overlay" style="display:none;">
                         <p class="cam-fail-icon">📷</p>
                         <p class="cam-fail-msg">Camera unavailable or not permitted</p>
-                        <p class="cam-gps-note">GPS is optional — you can still capture evidence</p>
+                        <p class="cam-gps-note">⚙️ Enable camera in browser settings, then reload</p>
                         <!-- PRIMARY: gallery picker always works -->
                         <label class="btn-file-pick-primary" for="captureFileFallback">📁 Pick Photo from Gallery</label>
-                        <div class="cam-fail-divider">— or try camera again —</div>
-                        <button type="button" class="btn-retry-cam-sm" onclick="retryCamera()">🔄 Retry Camera</button>
                     </div>
                 </div>
 
                 <div class="gps-device-bar">
-                    <span id="gpsStatusPill" class="gps-pill gps-fetching"
-                          onclick="retryGPS()" title="Tap to re-request GPS access">📍 Fetching GPS…</span>
-                    <button id="retryGpsBtn" type="button" class="btn-retry-gps" onclick="retryGPS()" style="display:none;">📍 Retry GPS</button>
+                    <span id="gpsStatusPill" class="gps-pill gps-fetching">📍 Fetching GPS…</span>
+                    <span id="gpsSettingsHint" class="gps-settings-hint" style="display:none;">⚙️ Enable location in browser settings</span>
                     <span id="deviceInfoChip" class="device-chip"></span>
                 </div>
 
@@ -151,7 +148,6 @@
                     <button type="button" class="btn-shutter" id="shutterBtn" onclick="captureSnapshot()" title="Capture evidence photo">
                         <span class="shutter-inner"></span>
                     </button>
-                    <button id="retryCameraBtn" type="button" class="btn-retry-cam-bar" onclick="retryCamera()" style="display:none;">🔄 Retry Camera</button>
                 </div>
             </div>
 

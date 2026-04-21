@@ -338,49 +338,20 @@ function startGeolocation() {
             pill.textContent = `📍 ${lat}, ${lng}`;
             pill.title = `GPS acquired ±${acc}m`;
             pill.className = 'gps-pill gps-acquired';
-            // Hide retry button once GPS is acquired
-            const retryBtn = document.getElementById('retryGpsBtn');
-            if (retryBtn) retryBtn.style.display = 'none';
+            const hint = document.getElementById('gpsSettingsHint');
+            if (hint) hint.style.display = 'none';
         },
         err => {
             pill.textContent = '⚠️ GPS denied';
             pill.className = 'gps-pill gps-denied';
-            // Show explicit retry button so user knows what to do
-            const retryBtn = document.getElementById('retryGpsBtn');
-            if (retryBtn) retryBtn.style.display = 'inline-flex';
+            const hint = document.getElementById('gpsSettingsHint');
+            if (hint) hint.style.display = 'inline';
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
 }
 
-/**
- * Re-request GPS. If permanently denied, show settings instructions.
- * If just dismissed or prompt state, re-request normally.
- */
-async function retryGPS() {
-    if (navigator.permissions) {
-        try {
-            const status = await navigator.permissions.query({ name: 'geolocation' });
-            if (status.state === 'denied') {
-                // Browser has permanently blocked — JS cannot re-prompt
-                const pill = document.getElementById('gpsStatusPill');
-                const btn  = document.getElementById('retryGpsBtn');
-                if (pill) { pill.textContent = '🚫 GPS Blocked'; pill.className = 'gps-pill gps-denied'; }
-                if (btn)  btn.textContent = '⚙️ Enable in Settings';
-                alert(
-                    'GPS is blocked by your browser.\n\n' +
-                    'To enable:\n' +
-                    '\u2022 Chrome/Edge: tap the \uD83D\uDD12 or \u2139 icon in the address bar \u2192 Site settings \u2192 Location \u2192 Allow\n' +
-                    '\u2022 Firefox: tap \uD83D\uDD12 \u2192 Connection Secure \u2192 More info \u2192 Permissions \u2192 Access your location \u2192 Allow\n' +
-                    '\u2022 Safari (iOS): Settings \u2192 Safari \u2192 Location \u2192 Allow\n\n' +
-                    'Then reload the page and try again.'
-                );
-                return;
-            }
-        } catch (_) { /* Permissions API not supported — fall through */ }
-    }
-    startGeolocation();
-}
+
 
 /** Open the Live Capture modal and initialise camera + GPS. */
 async function showCaptureModal() {
@@ -426,9 +397,6 @@ async function startCamera() {
         try {
             _captureStream = await navigator.mediaDevices.getUserMedia(c);
             video.srcObject = _captureStream;
-            // Camera succeeded — hide the retry camera button if visible
-            const retryCamBtn = document.getElementById('retryCameraBtn');
-            if (retryCamBtn) retryCamBtn.style.display = 'none';
             return;
         } catch (_) { /* try next */ }
     }
@@ -443,9 +411,6 @@ function _activateFallback(video, shutter, fallback) {
     shutter.style.display = 'none';
     const overlay = document.getElementById('cameraFailedOverlay');
     if (overlay) overlay.style.display = '';
-    // Show the retry camera button in controls bar
-    const retryCamBtn = document.getElementById('retryCameraBtn');
-    if (retryCamBtn) retryCamBtn.style.display = 'inline-flex';
 
     // Re-attach file-input change listener each time (once per activation)
     const freshInput = document.getElementById('captureFileFallback');
@@ -457,47 +422,6 @@ function _activateFallback(video, shutter, fallback) {
         _clientMeta   = collectClientMetadata();
         showPreviewStep();
     }, { once: true });
-}
-
-/** Retry camera — checks permission state first. Shows settings guide if permanently blocked. */
-async function retryCamera() {
-    // Check if permanently denied before trying again
-    if (navigator.permissions) {
-        try {
-            const status = await navigator.permissions.query({ name: 'camera' });
-            if (status.state === 'denied') {
-                alert(
-                    'Camera is blocked by your browser.\n\n' +
-                    'To enable:\n' +
-                    '\u2022 Chrome/Edge: tap \uD83D\uDD12 or \u2139 in address bar \u2192 Site settings \u2192 Camera \u2192 Allow\n' +
-                    '\u2022 Firefox: tap \uD83D\uDD12 \u2192 More info \u2192 Permissions \u2192 Use the camera \u2192 Allow\n' +
-                    '\u2022 Safari (iOS): Settings \u2192 Safari \u2192 Camera \u2192 Allow\n\n' +
-                    'Or use 📁 Pick Photo from Gallery below instead.\n\n' +
-                    'Then reload the page and try again.'
-                );
-                return;  // Don’t attempt getUserMedia — it will silent-fail
-            }
-        } catch (_) { /* Permissions API not supported — fall through */ }
-    }
-    const overlay = document.getElementById('cameraFailedOverlay');
-    if (overlay) overlay.style.display = 'none';
-    const video   = document.getElementById('captureVideo');
-    const shutter = document.getElementById('shutterBtn');
-    video.style.display   = '';
-    shutter.style.display = '';
-
-    if (_captureStream) {
-        _captureStream.getTracks().forEach(t => t.stop());
-        _captureStream = null;
-    }
-
-    // Reset the fail message in case it was changed by a previous blocked attempt
-    const msg = document.querySelector('.cam-fail-msg');
-    if (msg) msg.textContent = 'Camera access was denied or unavailable';
-
-    // Always just try again — no blocking on Permissions API
-    // If still denied, _activateFallback will re-show the overlay with gallery option
-    await startCamera();
 }
 
 /** Draw current video frame to canvas and convert to JPEG Blob. */

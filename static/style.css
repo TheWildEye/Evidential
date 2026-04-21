@@ -1084,11 +1084,9 @@ a {
     background: rgba(59, 130, 246, 0.15);
 }
 
-/* GPS pill — always tappable, never overflows */
+/* GPS pill — status indicator only */
 .gps-pill {
-    cursor: pointer;
     user-select: none;
-    transition: opacity .15s;
     max-width: 58%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1096,8 +1094,12 @@ a {
     display: inline-block;
 }
 
-.gps-pill:hover {
-    opacity: 0.82;
+/* Settings hint — shown when GPS is denied */
+.gps-settings-hint {
+    font-size: 0.62rem;
+    color: #92400e;
+    font-style: italic;
+    white-space: nowrap;
 }
 
 
