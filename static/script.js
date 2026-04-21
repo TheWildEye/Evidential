@@ -328,8 +328,10 @@ async function showCaptureModal() {
     const memStr = navigator.deviceMemory ? ` · ${navigator.deviceMemory}GB` : '';
     chip.textContent = (navigator.platform || 'Unknown') + memStr;
 
-    startGeolocation();
     await startCamera();
+    // Delay GPS request so camera popup is resolved first.
+    // Firing both simultaneously causes mobile browsers to drop the GPS popup silently.
+    setTimeout(startGeolocation, 800);
 }
 
 /** Request camera access. Tries rear, then front, then file-input fallback. */
