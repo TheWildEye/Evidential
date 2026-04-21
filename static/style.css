@@ -874,12 +874,12 @@ a {
 .gps-device-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.45rem 1rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 1rem;
     background: #ffffff;
     border-bottom: 1px solid var(--border);
     gap: 0.5rem;
-    flex-wrap: wrap;
+    row-gap: 0.2rem;
 }
 
 .gps-pill {
@@ -910,13 +910,15 @@ a {
 }
 
 .device-chip {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    font-family: 'Courier New', monospace;
-    max-width: 55%;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text);
+    font-family: inherit;
+    margin-left: auto;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 50%;
 }
 
 /* Camera controls bar — dark so shutter button is clearly visible */
@@ -1095,12 +1097,14 @@ a {
     display: inline-block;
 }
 
-/* Settings hint — shown when GPS is denied */
+/* Settings hint — own line below pill when GPS denied */
 .gps-settings-hint {
-    font-size: 0.68rem;
+    width: 100%;
+    font-size: 0.7rem;
     font-weight: 500;
+    font-style: normal;
     color: var(--text-muted);
-    white-space: nowrap;
+    padding-top: 0.05rem;
 }
 
 
