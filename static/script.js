@@ -291,11 +291,16 @@ function startGeolocation() {
             pill.textContent = `📍 ${lat}, ${lng}`;
             pill.title = `GPS acquired ±${acc}m`;
             pill.className = 'gps-pill gps-acquired';
+            // Hide retry button once GPS is acquired
+            const retryBtn = document.getElementById('retryGpsBtn');
+            if (retryBtn) retryBtn.style.display = 'none';
         },
         err => {
-            // Keep pill text SHORT so it never overflows on small screens
-            pill.textContent = '⚠️ GPS denied — tap to retry';
+            pill.textContent = '⚠️ GPS denied';
             pill.className = 'gps-pill gps-denied';
+            // Show explicit retry button so user knows what to do
+            const retryBtn = document.getElementById('retryGpsBtn');
+            if (retryBtn) retryBtn.style.display = 'inline-flex';
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
@@ -356,6 +361,9 @@ async function startCamera() {
         try {
             _captureStream = await navigator.mediaDevices.getUserMedia(c);
             video.srcObject = _captureStream;
+            // Camera succeeded — hide the retry camera button if visible
+            const retryCamBtn = document.getElementById('retryCameraBtn');
+            if (retryCamBtn) retryCamBtn.style.display = 'none';
             return;
         } catch (_) { /* try next */ }
     }
@@ -370,6 +378,9 @@ function _activateFallback(video, shutter, fallback) {
     shutter.style.display = 'none';
     const overlay = document.getElementById('cameraFailedOverlay');
     if (overlay) overlay.style.display = '';
+    // Show the retry camera button in controls bar
+    const retryCamBtn = document.getElementById('retryCameraBtn');
+    if (retryCamBtn) retryCamBtn.style.display = 'inline-flex';
 
     // Re-attach file-input change listener each time (once per activation)
     const freshInput = document.getElementById('captureFileFallback');

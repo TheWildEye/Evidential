@@ -143,6 +143,7 @@
                 <div class="gps-device-bar">
                     <span id="gpsStatusPill" class="gps-pill gps-fetching"
                           onclick="retryGPS()" title="Tap to re-request GPS access">📍 Fetching GPS…</span>
+                    <button id="retryGpsBtn" type="button" class="btn-retry-gps" onclick="retryGPS()" style="display:none;">📍 Retry GPS</button>
                     <span id="deviceInfoChip" class="device-chip"></span>
                 </div>
 
@@ -150,6 +151,7 @@
                     <button type="button" class="btn-shutter" id="shutterBtn" onclick="captureSnapshot()" title="Capture evidence photo">
                         <span class="shutter-inner"></span>
                     </button>
+                    <button id="retryCameraBtn" type="button" class="btn-retry-cam-bar" onclick="retryCamera()" style="display:none;">🔄 Retry Camera</button>
                 </div>
             </div>
 
