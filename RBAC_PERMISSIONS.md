@@ -46,7 +46,7 @@ Full administrative access. Intended for IT/security officers managing the syste
 ### 2. Field Officer
 **Username**: `officer` | **Password**: `officer123`
 
-Collects, registers, and hands off evidence in the field. No forensics or sealing duties.
+Collects, registers, and hands off evidence in the field. Can register evidence via the standard form **or** use the **📷 Live Evidence Capture** module (mobile browser) to capture photos with real-time GPS coordinates, device metadata, and EXIF extraction. No forensics or sealing duties.
 
 **Permissions**: view · create · transfer
 
@@ -112,11 +112,35 @@ Enforced via the `@check_perm(permission)` decorator in `app.py`.
 Returns `403 Forbidden` if the user's session does not have the required permission.
 
 ```python
+# Evidence creation (standard form + Live Capture)
 @app.route('/api/evidence/create', methods=['POST'])
 @login_required
-@check_perm('create')   # ← 403 if role lacks 'create'
-def create_evidence():
-    ...
+@check_perm('create')
+def create_evidence(): ...
+
+# Custody transfer
+@app.route('/api/evidence/<int:evidence_id>/transfer', methods=['POST'])
+@login_required
+@check_perm('transfer')
+def transfer_evidence(evidence_id): ...
+
+# File integrity verification (re-hash from disk)
+@app.route('/api/evidence/<int:evidence_id>/verify', methods=['POST'])
+@login_required
+@check_perm('verify')
+def verify_evidence(evidence_id): ...
+
+# Custody log chain verification
+@app.route('/api/evidence/<int:evidence_id>/verify_chain', methods=['POST'])
+@login_required
+@check_perm('verify')
+def verify_chain(evidence_id): ...
+
+# Seal evidence
+@app.route('/api/evidence/<int:evidence_id>/seal', methods=['POST'])
+@login_required
+@check_perm('seal')
+def seal_evidence(evidence_id): ...
 ```
 
 ### Frontend UI Layer (UX)
@@ -149,15 +173,18 @@ Buttons are conditionally rendered in Jinja2 templates based on session permissi
 - **5-tier RBAC** with **7 distinct permissions**
 - **Decorator Pattern** — `@check_perm()` cleanly separates auth logic from route logic
 - **Session-based permission caching** — permissions stored as dict in Flask session for O(1) lookup
-- **Three-layer security**: Backend decorator → Frontend template → Database (planned row-level)
+- **Three-layer security**: Backend decorator → Frontend template → Database seed
 - **Chain-of-custody lifecycle** modelled into roles: Officer → Custodian → Analyst → Auditor
+- **Two verification modes**: file integrity (`verify`) and log chain integrity (`verify_chain`) — both gated by the same `verify` permission
 
 ---
 
 ## Future Enhancements
 
 1. User management UI (add/remove users, change roles)
-2. Row-level security — users see only evidence they hold or created
+2. Delete evidence route + UI (permission already defined for System Admin)
 3. Two-factor authentication for System Admin
 4. Audit logging of all permission denials
 5. IP-based access restrictions for privileged roles
+6. PDF chain of custody report export (Court Auditor)
+7. Rate limiting on login endpoint
