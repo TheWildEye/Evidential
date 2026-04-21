@@ -354,13 +354,31 @@ function startGeolocation() {
 }
 
 /**
- * Re-request GPS on demand (called when user taps the pill).
- * Always retries — unlimited taps allowed. GPS is OPTIONAL for image capture.
+ * Re-request GPS. If permanently denied, show settings instructions.
+ * If just dismissed or prompt state, re-request normally.
  */
-function retryGPS() {
-    // Always just restart geolocation — no blocking on permission state.
-    // Even if 'denied', some browsers will re-prompt on re-call.
-    // Image capture is never gated on GPS.
+async function retryGPS() {
+    if (navigator.permissions) {
+        try {
+            const status = await navigator.permissions.query({ name: 'geolocation' });
+            if (status.state === 'denied') {
+                // Browser has permanently blocked — JS cannot re-prompt
+                const pill = document.getElementById('gpsStatusPill');
+                const btn  = document.getElementById('retryGpsBtn');
+                if (pill) { pill.textContent = '🚫 GPS Blocked'; pill.className = 'gps-pill gps-denied'; }
+                if (btn)  btn.textContent = '⚙️ Enable in Settings';
+                alert(
+                    'GPS is blocked by your browser.\n\n' +
+                    'To enable:\n' +
+                    '\u2022 Chrome/Edge: tap the \uD83D\uDD12 or \u2139 icon in the address bar \u2192 Site settings \u2192 Location \u2192 Allow\n' +
+                    '\u2022 Firefox: tap \uD83D\uDD12 \u2192 Connection Secure \u2192 More info \u2192 Permissions \u2192 Access your location \u2192 Allow\n' +
+                    '\u2022 Safari (iOS): Settings \u2192 Safari \u2192 Location \u2192 Allow\n\n' +
+                    'Then reload the page and try again.'
+                );
+                return;
+            }
+        } catch (_) { /* Permissions API not supported — fall through */ }
+    }
     startGeolocation();
 }
 
@@ -441,8 +459,26 @@ function _activateFallback(video, shutter, fallback) {
     }, { once: true });
 }
 
-/** Retry camera access — re-triggers browser permission popup. Unlimited retries. */
+/** Retry camera — checks permission state first. Shows settings guide if permanently blocked. */
 async function retryCamera() {
+    // Check if permanently denied before trying again
+    if (navigator.permissions) {
+        try {
+            const status = await navigator.permissions.query({ name: 'camera' });
+            if (status.state === 'denied') {
+                alert(
+                    'Camera is blocked by your browser.\n\n' +
+                    'To enable:\n' +
+                    '\u2022 Chrome/Edge: tap \uD83D\uDD12 or \u2139 in address bar \u2192 Site settings \u2192 Camera \u2192 Allow\n' +
+                    '\u2022 Firefox: tap \uD83D\uDD12 \u2192 More info \u2192 Permissions \u2192 Use the camera \u2192 Allow\n' +
+                    '\u2022 Safari (iOS): Settings \u2192 Safari \u2192 Camera \u2192 Allow\n\n' +
+                    'Or use 📁 Pick Photo from Gallery below instead.\n\n' +
+                    'Then reload the page and try again.'
+                );
+                return;  // Don’t attempt getUserMedia — it will silent-fail
+            }
+        } catch (_) { /* Permissions API not supported — fall through */ }
+    }
     const overlay = document.getElementById('cameraFailedOverlay');
     if (overlay) overlay.style.display = 'none';
     const video   = document.getElementById('captureVideo');
