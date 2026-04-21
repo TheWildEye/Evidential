@@ -235,24 +235,71 @@ let _gpsData        = null;
 let _clientMeta     = null;
 let _geoWatchId     = null;
 
+/** Parse a human-readable OS string from the userAgent. */
+function _detectOS(ua) {
+    if (/android/i.test(ua)) {
+        const v = ua.match(/Android\s([\d.]+)/);
+        return v ? `Android ${v[1]}` : 'Android';
+    }
+    if (/iphone/i.test(ua)) {
+        const v = ua.match(/OS\s([\d_]+)/);
+        return v ? `iOS ${v[1].replace(/_/g, '.')} (iPhone)` : 'iOS (iPhone)';
+    }
+    if (/ipad/i.test(ua)) {
+        const v = ua.match(/OS\s([\d_]+)/);
+        return v ? `iPadOS ${v[1].replace(/_/g, '.')}` : 'iPadOS';
+    }
+    if (/windows/i.test(ua)) return 'Windows';
+    if (/macintosh|mac os/i.test(ua)) return 'macOS';
+    if (/linux/i.test(ua)) return 'Linux';
+    return navigator.platform || 'Unknown';
+}
+
+/** Parse device model from Android userAgent string. */
+function _detectModel(ua) {
+    // Android UA format: (Linux; Android X.X; ModelName)
+    const m = ua.match(/\(Linux;\sAndroid\s[\d.]+;\s([^)]+)\)/);
+    if (m) return m[1].trim();
+    if (/iphone/i.test(ua)) return 'iPhone';
+    if (/ipad/i.test(ua)) return 'iPad';
+    return null;
+}
+
 /** Collect all available browser/device metadata at call time. */
 function collectClientMetadata() {
     const nav  = window.navigator;
+    const ua   = nav.userAgent;
     const conn = nav.connection || nav.mozConnection || nav.webkitConnection || {};
+
     return {
-        userAgent:              nav.userAgent,
-        platform:               nav.platform,
-        language:               nav.language,
-        screenWidth:            window.screen.width,
-        screenHeight:           window.screen.height,
-        colorDepth:             window.screen.colorDepth,
-        hardwareConcurrency:    nav.hardwareConcurrency  || null,
-        deviceMemory:           nav.deviceMemory         || null,
-        connection_type:        conn.type                || null,
-        connection_effectiveType: conn.effectiveType     || null,
-        timezone:               Intl.DateTimeFormat().resolvedOptions().timeZone,
-        captureTimestamp:       new Date().toISOString()
+        userAgent:                ua,
+        os:                       _detectOS(ua),
+        deviceModel:              _detectModel(ua),
+        language:                 nav.language,
+        screenWidth:              window.screen.width,
+        screenHeight:             window.screen.height,
+        devicePixelRatio:         window.devicePixelRatio || null,
+        screenOrientation:        (screen.orientation && screen.orientation.type) || null,
+        colorDepth:               window.screen.colorDepth,
+        maxTouchPoints:           nav.maxTouchPoints || 0,
+        hardwareConcurrency:      nav.hardwareConcurrency || null,
+        deviceMemory:             nav.deviceMemory || null,
+        connection_type:          conn.type || null,
+        connection_effectiveType: conn.effectiveType || null,
+        connection_downlink_mbps: conn.downlink || null,
+        timezone:                 Intl.DateTimeFormat().resolvedOptions().timeZone,
+        captureTimestamp:         new Date().toISOString()
     };
+}
+
+/** Attach battery info asynchronously to an existing metadata object. */
+async function _enrichWithBattery(meta) {
+    if (!navigator.getBattery) return;
+    try {
+        const b = await navigator.getBattery();
+        meta.battery_level_pct  = Math.round(b.level * 100);
+        meta.battery_charging   = b.charging;
+    } catch (_) {}
 }
 
 /** Start GPS watchPosition; update pill UI. Pill is always tappable to retry. */
@@ -327,11 +374,11 @@ async function showCaptureModal() {
 
     // Collect baseline client metadata immediately on open
     _clientMeta = collectClientMetadata();
+    _enrichWithBattery(_clientMeta);  // async, enriches in background
 
-    // Show device info chip
+    // Show device info chip — OS instead of raw platform
     const chip = document.getElementById('deviceInfoChip');
-    const memStr = navigator.deviceMemory ? ` · ${navigator.deviceMemory}GB` : '';
-    chip.textContent = (navigator.platform || 'Unknown') + memStr;
+    chip.textContent = _clientMeta.os + (_clientMeta.deviceModel ? ` · ${_clientMeta.deviceModel}` : '');
 
     await startCamera();
     // Delay GPS request so camera popup is resolved first.
@@ -427,6 +474,7 @@ function captureSnapshot() {
 
     // Refresh metadata timestamp at the exact moment of capture
     _clientMeta = collectClientMetadata();
+    await _enrichWithBattery(_clientMeta);
 
     canvas.toBlob(blob => {
         _capturedBlob = blob;
@@ -441,15 +489,25 @@ function showPreviewStep() {
 
     // Build metadata strip rows
     const gps  = _gpsData;
+    const cli  = _clientMeta;
+    const netStr = [cli.connection_type, cli.connection_effectiveType, cli.connection_downlink_mbps ? `${cli.connection_downlink_mbps} Mbps` : null]
+        .filter(Boolean).join(' / ') || 'Unknown';
+    const battStr = cli.battery_level_pct != null
+        ? `${cli.battery_level_pct}% ${cli.battery_charging ? '⚡ Charging' : '🔋'}`
+        : null;
     const rows = [
-        ['📅 Captured',  _clientMeta.captureTimestamp],
-        ['🌐 Timezone',  _clientMeta.timezone],
-        ['📡 Network',   _clientMeta.connection_effectiveType || _clientMeta.connection_type || 'Unknown'],
-        ['📍 GPS',       gps
+        ['📅 Captured',    cli.captureTimestamp],
+        ['🌐 Timezone',    cli.timezone],
+        ['📱 OS',          cli.os || 'Unknown'],
+        cli.deviceModel ? ['📲 Device',  cli.deviceModel] : null,
+        ['📡 Network',     netStr],
+        battStr ? ['🔋 Battery',    battStr] : null,
+        ['📍 GPS',         gps
             ? `${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)} (±${Math.round(gps.accuracy_m || 0)}m)`
             : 'Not available'],
-        ['💻 Platform',  _clientMeta.platform || 'Unknown'],
-    ];
+        cli.maxTouchPoints > 0 ? ['👆 Touch',  `${cli.maxTouchPoints} points`] : null,
+        cli.devicePixelRatio > 1 ? ['🖥 DPR', `${cli.devicePixelRatio}x`] : null,
+    ].filter(Boolean);
     document.getElementById('capturedMetaStrip').innerHTML = rows.map(([k, v]) =>
         `<div class="meta-strip-row">
             <span class="meta-strip-key">${k}</span>

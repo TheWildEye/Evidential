@@ -175,10 +175,22 @@
                             </div>
                             {% endif %}
 
-                            {% if cli.platform %}
+                            {% if cli.get('os') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">OS</span>
+                                <span class="device-meta-val mono">{{ cli.os }}</span>
+                            </div>
+                            {% elif cli.get('platform') %}
                             <div class="device-meta-row">
                                 <span class="device-meta-key">Platform</span>
                                 <span class="device-meta-val mono">{{ cli.platform }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('deviceModel') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Device Model</span>
+                                <span class="device-meta-val mono">{{ cli.deviceModel }}</span>
                             </div>
                             {% endif %}
 
@@ -208,10 +220,19 @@
                             {% endif %}
                             {% endif %}
 
-                            {% if cli.get('connection_effectiveType') or cli.get('connection_type') %}
+                            {% if cli.get('connection_type') or cli.get('connection_effectiveType') %}
                             <div class="device-meta-row">
                                 <span class="device-meta-key">Network</span>
-                                <span class="device-meta-val">{{ cli.get('connection_effectiveType') or cli.get('connection_type') }}</span>
+                                <span class="device-meta-val">
+                                    {{ cli.get('connection_type') or '' }}{% if cli.get('connection_effectiveType') %} / {{ cli.connection_effectiveType }}{% endif %}{% if cli.get('connection_downlink_mbps') %} ({{ cli.connection_downlink_mbps }} Mbps){% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('battery_level_pct') is not none %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Battery</span>
+                                <span class="device-meta-val mono">{{ cli.battery_level_pct }}%{% if cli.get('battery_charging') %} ⚡ Charging{% endif %}</span>
                             </div>
                             {% endif %}
 
@@ -229,17 +250,24 @@
                             </div>
                             {% endif %}
 
-                            {% if cli.get('deviceMemory') %}
+                            {% if cli.get('maxTouchPoints') %}
                             <div class="device-meta-row">
-                                <span class="device-meta-key">RAM</span>
-                                <span class="device-meta-val mono">{{ cli.deviceMemory }}GB</span>
+                                <span class="device-meta-key">Touch Points</span>
+                                <span class="device-meta-val mono">{{ cli.maxTouchPoints }}</span>
                             </div>
                             {% endif %}
 
-                            {% if cli.get('language') %}
+                            {% if cli.get('devicePixelRatio') and cli.devicePixelRatio > 1 %}
                             <div class="device-meta-row">
-                                <span class="device-meta-key">Language</span>
-                                <span class="device-meta-val">{{ cli.language }}</span>
+                                <span class="device-meta-key">Pixel Ratio</span>
+                                <span class="device-meta-val mono">{{ cli.devicePixelRatio }}x</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('screenOrientation') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Orientation</span>
+                                <span class="device-meta-val mono">{{ cli.screenOrientation }}</span>
                             </div>
                             {% endif %}
                         </div>
