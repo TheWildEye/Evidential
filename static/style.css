@@ -1864,8 +1864,98 @@ a {
     letter-spacing: 0.05em;
 }
 
+/* ================================================================
+   CERTIFICATE PAGE  -  MOBILE RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 768px) {
+    .cert-nav {
+        flex-wrap: wrap;
+        padding: 0.6rem 1rem;
+        gap: 0.5rem;
+    }
+    /* Hide long hint text on mobile - waste of space */
+    .cert-nav > span {
+        display: none;
+    }
+    .cert-nav .btn-primary,
+    .cert-nav .btn-secondary {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.75rem;
+    }
+    .cert-page {
+        margin: 0.5rem;
+        padding: 1.2rem 1rem;
+        font-size: 0.82rem;
+        line-height: 1.6;
+    }
+    .cert-header h1 {
+        font-size: 1rem;
+        letter-spacing: 0.06em;
+    }
+    .cert-header .cert-subtitle {
+        font-size: 0.7rem;
+    }
+    /* Stack key + value vertically so long hashes don't overflow */
+    .cert-row {
+        flex-direction: column;
+        gap: 0.1rem;
+        margin-bottom: 0.6rem;
+    }
+    .cert-key {
+        min-width: unset;
+        width: 100%;
+        font-size: 0.75rem;
+    }
+    .cert-val {
+        font-size: 0.72rem;
+        word-break: break-all;
+    }
+    .cert-hash-block {
+        font-size: 0.62rem;
+        padding: 0.4rem 0.6rem;
+    }
+    /* Signature columns stack vertically on mobile */
+    .cert-signature-block {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .cert-legal-block {
+        font-size: 0.75rem;
+        padding: 0.75rem 0.9rem;
+    }
+    .cert-watermark {
+        font-size: 3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .cert-page {
+        margin: 0;
+        padding: 1rem 0.75rem;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+    }
+    /* Full-width nav buttons on small phones */
+    .cert-nav .btn-primary,
+    .cert-nav .btn-secondary {
+        flex: 1;
+        text-align: center;
+    }
+    .cert-header h1 {
+        font-size: 0.88rem;
+    }
+    .cert-section h2 {
+        font-size: 0.72rem;
+    }
+    .cert-watermark {
+        font-size: 2.2rem;
+    }
+}
+
 @media print {
-    /* ── Page setup ── */
+    /* -- Page setup -- */
     @page {
         size: A4 portrait;
         margin: 1.5cm 2cm 1.5cm 2cm;
