@@ -285,14 +285,32 @@ async function _enrichWithUACH(meta) {
         const hints = await navigator.userAgentData.getHighEntropyValues(
             ['platform', 'platformVersion', 'model', 'mobile', 'architecture']
         );
-        const platform = hints.platform || navigator.userAgentData.platform || '';
-        const version  = hints.platformVersion || '';
-        if (platform) meta.os = version ? `${platform} ${version}` : platform;
+        const platform = (hints.platform || navigator.userAgentData.platform || '').trim();
+        const rawVer   = (hints.platformVersion || '').trim();
+
+        if (platform) {
+            if (platform === 'Windows') {
+                // UACH returns NT version (10.0.x = W10, 13.x = W11) which is confusing
+                // Just keep it as 'Windows' - user knows their own version
+                meta.os = 'Windows';
+            } else if (platform === 'Android') {
+                // UACH gives the real Android version (Chrome froze UA string to 10)
+                const major = rawVer ? rawVer.split('.')[0] : '';
+                meta.os = major ? `Android ${major}` : 'Android';
+            } else if (platform === 'macOS') {
+                // UACH version is like '12.6.0' - show major.minor
+                const parts = rawVer.split('.');
+                const v = parts.length >= 2 ? `${parts[0]}.${parts[1]}` : rawVer;
+                meta.os = v ? `macOS ${v}` : 'macOS';
+            } else {
+                meta.os = rawVer ? `${platform} ${rawVer}` : platform;
+            }
+        }
         if (hints.model && hints.model.trim() && hints.model.trim() !== 'K')
             meta.deviceModel = hints.model.trim();
         if (hints.mobile !== undefined) meta.isMobile = hints.mobile;
         if (hints.architecture) meta.cpuArchitecture = hints.architecture;
-    } catch (_) { /* UACH unsupported or blocked  -  UA fallback already in place */ }
+    } catch (_) { /* UACH unsupported or blocked - UA fallback already in place */ }
 }
 
 /** Collect all available browser/device metadata at call time. */
@@ -300,6 +318,30 @@ function collectClientMetadata() {
     const nav  = window.navigator;
     const ua   = nav.userAgent;
     const conn = nav.connection || nav.mozConnection || nav.webkitConnection || {};
+
+    const tz  = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Local timestamp in user's timezone (not UTC) for accuracy
+    const now  = new Date();
+    const localStr = now.toLocaleString('en-GB', {
+        timeZone: tz,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+    }) + ' ' + tz;
+
+    // Network: distinguish connection type clearly so 'Cellular' vs 'WiFi' is accurate
+    const connType = (conn.type || '').toLowerCase();
+    const effType  = (conn.effectiveType || '').toUpperCase(); // e.g. '4G', '3G'
+    let networkLabel = null;
+    if (connType === 'wifi' || connType === 'ethernet') {
+        networkLabel = connType === 'wifi' ? 'WiFi' : 'Ethernet';
+        if (conn.downlink) networkLabel += ` (${conn.downlink} Mbps)`;
+    } else if (connType === 'cellular') {
+        networkLabel = `Cellular ${effType}`;
+    } else if (conn.effectiveType) {
+        // type unknown - just show effective bandwidth measurement
+        networkLabel = `Network (measured ${effType})`;
+    }
 
     return {
         userAgent:                ua,
@@ -314,11 +356,12 @@ function collectClientMetadata() {
         maxTouchPoints:           nav.maxTouchPoints || 0,
         hardwareConcurrency:      nav.hardwareConcurrency || null,
         deviceMemory:             nav.deviceMemory || null,
-        connection_type:          conn.type || null,
+        connection_type:          networkLabel || conn.type || null,
         connection_effectiveType: conn.effectiveType || null,
         connection_downlink_mbps: conn.downlink || null,
-        timezone:                 Intl.DateTimeFormat().resolvedOptions().timeZone,
-        captureTimestamp:         new Date().toISOString()
+        timezone:                 tz,
+        captureTimestamp:         localStr,
+        captureTimestampISO:      now.toISOString()  // keep UTC ISO for certificate hash
     };
 }
 
