@@ -16,7 +16,7 @@ db = Database()
 def extract_exif(file_path):
     """Extract forensic EXIF metadata from an image file.
     Returns a dict of EXIF fields on success, {} on any failure (non-image, no EXIF, etc.).
-    Graceful — never raises; never breaks a non-image upload.
+    Graceful  -  never raises; never breaks a non-image upload.
     """
     try:
         from PIL import Image, ExifTags
@@ -373,7 +373,7 @@ def verify_chain(evidence_id):
     try:
         print(f"[CHAIN] User: {session['user']['username']}, Evidence ID: {evidence_id}")
         result = db.verify_log_chain(evidence_id)
-        print(f"[CHAIN] Result: {result['status']} — {result['total']} entries checked")
+        print(f"[CHAIN] Result: {result['status']}  -  {result['total']} entries checked")
         return jsonify(result)
     except Exception as e:
         print(f"[CHAIN] Error: {type(e).__name__}: {e}")
@@ -401,9 +401,41 @@ def seal_evidence(evidence_id):
 
 
 
+
+@app.route('/evidence/<int:evidence_id>/certificate')
+@login_required
+def evidence_certificate(evidence_id):
+    """Render a printable BSA 2023 Section 63 / IEA Section 65B certificate."""
+    evidence = db.get_evidence(evidence_id)
+    if not evidence:
+        return redirect(url_for('dashboard'))
+
+    custody_log = db.get_custody_log(evidence_id)
+
+    device_metadata = None
+    raw_meta = evidence.get('device_metadata')
+    if raw_meta:
+        try:
+            device_metadata = json.loads(raw_meta)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    from datetime import datetime as dt
+    cert_issued_at = dt.now().strftime('%d %B %Y, %H:%M:%S IST')
+    cert_ref = f"COC-CERT-{evidence_id:06d}-{dt.now().strftime('%Y%m%d%H%M%S')}"
+
+    return render_template('certificate.html',
+                           evidence=evidence,
+                           custody_log=custody_log,
+                           device_metadata=device_metadata,
+                           cert_issued_at=cert_issued_at,
+                           cert_ref=cert_ref,
+                           certifier=session['user'])
+
+
 if __name__ == '__main__':
     print("\n" + "="*55)
-    print(" Chain of Custody — Evidence Management System")
+    print(" Chain of Custody  -  Evidence Management System")
     print("="*55)
     print("\n Demo Credentials:")
     print("  admin     / admin123    (System Admin)")

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ evidence.case_number }} — Chain of Custody</title>
+    <title>{{ evidence.case_number }}  -  Chain of Custody</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -63,7 +63,7 @@
                         <div class="hash-item">
                             <span class="hash-label">Current Hash</span>
                             {% if evidence.current_hash == 'FILE_MISSING' %}
-                            <code class="hash-value hash-mismatch">File not found on disk — renamed, moved, or deleted</code>
+                            <code class="hash-value hash-mismatch">File not found on disk  -  renamed, moved, or deleted</code>
                             {% else %}
                             <code class="hash-value {% if evidence.original_hash != evidence.current_hash %}hash-mismatch{% endif %}">{{ evidence.current_hash }}</code>
                             {% endif %}
@@ -270,6 +270,37 @@
                                 <span class="device-meta-val mono">{{ cli.screenOrientation }}</span>
                             </div>
                             {% endif %}
+
+                            {% if cli.get('captureMode') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Capture Mode</span>
+                                <span class="device-meta-val">{{ cli.captureMode | replace('_', ' ') | title }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('recordDurationSeconds') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Recording Duration</span>
+                                <span class="device-meta-val mono">
+                                    {% set dur = cli.recordDurationSeconds | int %}
+                                    {{ '%02d' % (dur // 60) }}:{{ '%02d' % (dur % 60) }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('isMobile') is not none %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">Device Type</span>
+                                <span class="device-meta-val">{{ 'Mobile' if cli.isMobile else 'Desktop' }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if cli.get('cpuArchitecture') %}
+                            <div class="device-meta-row">
+                                <span class="device-meta-key">CPU Architecture</span>
+                                <span class="device-meta-val mono">{{ cli.cpuArchitecture }}</span>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endif %}
 
@@ -297,32 +328,32 @@
                         <source src="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}">
                         Your browser does not support the audio element.
                     </audio>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Audio evidence — SHA-256 hash computed on the original bytes.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Audio evidence  -  SHA-256 hash computed on the original bytes.</p>
 
-                    {% elif file_ext in ['.mp4', '.mov'] %}
+                    {% elif file_ext in ['.mp4', '.mov', '.webm'] %}
                     <video controls style="width: 100%; max-height: 400px; background: #000; border-radius: var(--radius); margin-bottom: 1rem;">
                         <source src="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}">
                         Your browser does not support the video element.
                     </video>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Video evidence — SHA-256 hash computed on the original bytes.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Video evidence  -  SHA-256 hash computed on the original bytes.</p>
 
                     {% elif file_ext in ['.jpg', '.jpeg', '.png', '.gif'] %}
                     <img src="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}"
                          style="max-width: 100%; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 1rem;">
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Image evidence — SHA-256 hash computed on the original bytes.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Image evidence  -  SHA-256 hash computed on the original bytes.</p>
 
                     {% elif file_ext == '.pdf' %}
                     <a href="{{ url_for('serve_evidence_file', evidence_id=evidence.id) }}" target="_blank"
                        class="btn-secondary" style="display: inline-block; margin-bottom: 1rem;">
                         Open PDF
                     </a>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">PDF evidence — SHA-256 hash computed on the original bytes.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">PDF evidence  -  SHA-256 hash computed on the original bytes.</p>
 
                     {% elif file_ext == '.txt' and file_content is not none %}
                     <div id="fileContentDisplay"
                         style="background: var(--bg); padding: 1rem; border-radius: var(--radius); font-family: 'Courier New', monospace; white-space: pre-wrap; color: var(--text); border: 1px solid var(--border); font-size: 0.85rem;">{{ file_content }}</div>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem;">
-                        Text evidence (read-only) — modify the file on disk to simulate tampering, then run integrity check.
+                        Text evidence (read-only)  -  modify the file on disk to simulate tampering, then run integrity check.
                     </p>
 
                     {% endif %}
@@ -342,6 +373,13 @@
                 {% if user.permissions.seal and evidence.status != 'Sealed' %}
                 <button class="btn-action" onclick="sealEvidence({{ evidence.id }})">Seal Evidence</button>
                 {% endif %}
+                <a href="{{ url_for('evidence_certificate', evidence_id=evidence.id) }}"
+                   target="_blank"
+                   class="btn-action"
+                   style="text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem;"
+                   title="Generate BSA 2023 / IEA Section 65B Certificate">
+                    Generate Certificate
+                </a>
             </div>
             <div id="chainResult" class="verify-result"></div>
 
@@ -407,7 +445,7 @@
                 <div class="form-group">
                     <label>Transfer To</label>
                     <select id="transfer_to" required>
-                        <option value="">— Select User —</option>
+                        <option value=""> -  Select User  - </option>
                         {% for user in coc_users %}
                         <option value="{{ user.username }}">{{ user.username }} ({{ user.role }})</option>
                         {% endfor %}

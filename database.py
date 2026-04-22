@@ -415,7 +415,7 @@ class Database:
           2. previous_hash stored == chain_hash of the prior entry (or 'GENESIS' for first)
 
         Returns a dict with:
-          is_valid  : bool — True if entire chain is intact
+          is_valid  : bool  -  True if entire chain is intact
           status    : 'PASS' or 'FAIL'
           total     : total number of log entries checked
           broken_at : index (1-based) of the first broken entry, or None

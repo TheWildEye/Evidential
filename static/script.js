@@ -1,5 +1,5 @@
 const acceptMap = {
-    'Video':     '.mp4,.mov',
+    'Video':     '.mp4,.mov,.webm',
     'Audio':     '.mp3,.wav',
     'Image':     '.jpg,.jpeg,.png',
     'Document':  '.pdf',
@@ -36,7 +36,7 @@ async function createEvidence(event) {
     const fileInput = document.getElementById('evidence_file');
 
     const allowedExtensions = {
-        'Video':     ['.mp4', '.mov'],
+        'Video':     ['.mp4', '.mov', '.webm'],
         'Audio':     ['.mp3', '.wav'],
         'Image':     ['.jpg', '.jpeg', '.png'],
         'Document':  ['.pdf'],
@@ -141,10 +141,10 @@ async function verifyIntegrity(evidenceId) {
 
         if (result.is_valid) {
             resultDiv.className = 'verify-result verify-pass show';
-            resultDiv.innerHTML = 'Integrity Check: PASS — Hash matches original.';
+            resultDiv.innerHTML = 'Integrity Check: PASS  -  Hash matches original.';
         } else {
             resultDiv.className = 'verify-result verify-fail show';
-            resultDiv.innerHTML = 'Integrity Check: FAIL — Evidence may have been tampered with.';
+            resultDiv.innerHTML = 'Integrity Check: FAIL  -  Evidence may have been tampered with.';
         }
 
         setTimeout(() => location.reload(), 2000);
@@ -179,10 +179,12 @@ async function sealEvidence(evidenceId) {
 }
 
 window.onclick = function(event) {
-    const createModal = document.getElementById('createModal');
+    const createModal   = document.getElementById('createModal');
     const transferModal = document.getElementById('transferModal');
-    if (event.target === createModal) hideCreateModal();
+    const videoModal    = document.getElementById('videoModal');
+    if (event.target === createModal)   hideCreateModal();
     if (event.target === transferModal) hideTransferModal();
+    if (event.target === videoModal)    hideVideoModal();
 };
 
 async function verifyChain(evidenceId) {
@@ -204,13 +206,13 @@ async function verifyChain(evidenceId) {
 
         if (result.is_valid) {
             resultDiv.className = 'verify-result verify-pass show';
-            resultDiv.innerHTML = `Chain Integrity: PASS &mdash; All ${result.total} log entries verified. Chain is intact.`;
+            resultDiv.innerHTML = `Chain Integrity: PASS  - All ${result.total} log entries verified. Chain is intact.`;
         } else {
             const broken = result.entries && result.entries[result.broken_at - 1];
             const action = broken ? broken.action : 'Unknown';
             const by = broken ? broken.performed_by : 'Unknown';
             resultDiv.className = 'verify-result verify-fail show';
-            resultDiv.innerHTML = `Chain Integrity: FAIL &mdash; Entry ${result.broken_at} of ${result.total} has been tampered with. (Action: "${action}", By: ${by})`;
+            resultDiv.innerHTML = `Chain Integrity: FAIL  - Entry ${result.broken_at} of ${result.total} has been tampered with. (Action: "${action}", By: ${by})`;
         }
     } catch (error) {
         resultDiv.className = 'verify-result verify-fail show';
@@ -235,10 +237,10 @@ let _gpsData        = null;
 let _clientMeta     = null;
 let _geoWatchId     = null;
 
-/** Parse a human-readable OS string from the userAgent. */
+/** Parse a human-readable OS string from the userAgent (fallback only). */
 function _detectOS(ua) {
     if (/android/i.test(ua)) {
-        const v = ua.match(/Android\s([\d.]+)/);
+        const v = ua.match(/Android[\s/]([\d.]+)/);
         return v ? `Android ${v[1]}` : 'Android';
     }
     if (/iphone/i.test(ua)) {
@@ -249,20 +251,48 @@ function _detectOS(ua) {
         const v = ua.match(/OS\s([\d_]+)/);
         return v ? `iPadOS ${v[1].replace(/_/g, '.')}` : 'iPadOS';
     }
+    // Check Windows BEFORE Linux  -  Android UA also contains 'Linux'
+    // Note: Chrome on Windows 11 still sends 'Windows NT 10.0'  -  UACH gives real version
     if (/windows/i.test(ua)) return 'Windows';
-    if (/macintosh|mac os/i.test(ua)) return 'macOS';
+    if (/macintosh|mac os x/i.test(ua)) return 'macOS';
+    // Linux fallback  -  only if not Android (already caught above)
     if (/linux/i.test(ua)) return 'Linux';
     return navigator.platform || 'Unknown';
 }
 
-/** Parse device model from Android userAgent string. */
+/** Parse device model from Android userAgent string (fallback only). */
 function _detectModel(ua) {
-    // Android UA format: (Linux; Android X.X; ModelName)
-    const m = ua.match(/\(Linux;\sAndroid\s[\d.]+;\s([^)]+)\)/);
-    if (m) return m[1].trim();
+    // Modern Chrome sends a reduced UA  -  'K' or empty; UACH gives real model
+    // Attempt to extract model from older-style full Android UA
+    const m = ua.match(/\(Linux;\s*Android\s*[\d.]+;\s*([^;)]+?)(?:\s+Build|\))/i);
+    if (m) {
+        const raw = m[1].trim();
+        // Ignore generic Chrome reduced-UA placeholders
+        if (raw && raw !== 'K' && raw.length > 1) return raw;
+    }
     if (/iphone/i.test(ua)) return 'iPhone';
     if (/ipad/i.test(ua)) return 'iPad';
     return null;
+}
+
+/**
+ * Enrich metadata with accurate OS + model from UA Client Hints (Chrome 90+, Edge).
+ * Falls back gracefully  -  never throws. Runs async in the background.
+ */
+async function _enrichWithUACH(meta) {
+    if (!navigator.userAgentData) return;
+    try {
+        const hints = await navigator.userAgentData.getHighEntropyValues(
+            ['platform', 'platformVersion', 'model', 'mobile', 'architecture']
+        );
+        const platform = hints.platform || navigator.userAgentData.platform || '';
+        const version  = hints.platformVersion || '';
+        if (platform) meta.os = version ? `${platform} ${version}` : platform;
+        if (hints.model && hints.model.trim() && hints.model.trim() !== 'K')
+            meta.deviceModel = hints.model.trim();
+        if (hints.mobile !== undefined) meta.isMobile = hints.mobile;
+        if (hints.architecture) meta.cpuArchitecture = hints.architecture;
+    } catch (_) { /* UACH unsupported or blocked  -  UA fallback already in place */ }
 }
 
 /** Collect all available browser/device metadata at call time. */
@@ -335,7 +365,7 @@ function startGeolocation() {
             const lat = pos.coords.latitude.toFixed(4);
             const lng = pos.coords.longitude.toFixed(4);
             const acc = Math.round(pos.coords.accuracy || 0);
-            pill.textContent = `📍 GPS — ${lat}, ${lng}`;
+            pill.textContent = `📍 GPS  -  ${lat}, ${lng}`;
             pill.title = `GPS acquired ±${acc}m`;
             pill.className = 'gps-pill gps-acquired';
             const hint = document.getElementById('gpsSettingsHint');
@@ -361,11 +391,11 @@ async function showCaptureModal() {
     _capturedBlob = null;
     _gpsData = null;
 
-    // Collect baseline client metadata immediately on open
     _clientMeta = collectClientMetadata();
-    _enrichWithBattery(_clientMeta);  // async, enriches in background
+    _enrichWithBattery(_clientMeta);   // async  -  battery level
+    _enrichWithUACH(_clientMeta);      // async  -  real OS + model via Client Hints
 
-    // Show device info chip — OS instead of raw platform
+    // Show device info chip  -  OS instead of raw platform
     const chip = document.getElementById('deviceInfoChip');
     chip.textContent = _clientMeta.os + (_clientMeta.deviceModel ? ` · ${_clientMeta.deviceModel}` : '');
 
@@ -401,11 +431,11 @@ async function startCamera() {
         } catch (_) { /* try next */ }
     }
 
-    // All getUserMedia attempts failed — use file input as last resort
+    // All getUserMedia attempts failed  -  use file input as last resort
     _activateFallback(video, shutter, fallback);
 }
 
-/** Show camera-failed overlay. Gallery picker is the PRIMARY action — capture always possible. */
+/** Show camera-failed overlay. Gallery picker is the PRIMARY action  -  capture always possible. */
 function _activateFallback(video, shutter, fallback) {
     video.style.display   = 'none';
     shutter.style.display = 'none';
@@ -432,9 +462,10 @@ function captureSnapshot() {
     canvas.height = video.videoHeight || 720;
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Refresh metadata at exact moment of capture; battery enriches in background
+    // Refresh metadata at exact moment of capture; battery + UACH enrich in background
     _clientMeta = collectClientMetadata();
-    _enrichWithBattery(_clientMeta);  // no await — runs async in background
+    _enrichWithBattery(_clientMeta);
+    _enrichWithUACH(_clientMeta);
 
     canvas.toBlob(blob => {
         _capturedBlob = blob;
@@ -480,7 +511,7 @@ function showPreviewStep() {
         ? `GPS: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}`
         : 'GPS: N/A';
     document.getElementById('cap_description').value =
-        `Live capture — ${_clientMeta.captureTimestamp} — ${gpsStr}`;
+        `Live capture  -  ${_clientMeta.captureTimestamp}  -  ${gpsStr}`;
 
     document.getElementById('captureStep1').style.display = 'none';
     document.getElementById('captureStep2').style.display = '';
@@ -563,6 +594,440 @@ async function submitLiveCapture(event) {
             return;
         }
 
+        const result = await response.json();
+        if (response.ok && result.success) {
+            window.location.href = `/evidence/${result.evidence_id}`;
+        } else {
+            alert(result.error || 'Error creating evidence');
+            submitBtn.disabled    = false;
+            submitBtn.textContent = 'Register Evidence';
+        }
+    } catch (err) {
+        alert('Upload error: ' + err.message);
+        submitBtn.disabled    = false;
+        submitBtn.textContent = 'Register Evidence';
+    }
+}
+
+/* ================================================================
+   LIVE VIDEO RECORDING MODULE
+   Uses MediaRecorder API. Completely separate state from the
+   image-capture module above. Submits to the same
+   /api/evidence/create endpoint as a .webm (or .mp4) file.
+   ================================================================ */
+
+let _recordStream      = null;
+let _recordedChunks    = [];
+let _mediaRecorder     = null;
+let _recordedBlob      = null;
+let _recordGpsData     = null;
+let _recordClientMeta  = null;
+let _recordGeoWatchId  = null;
+let _recordTimerInt    = null;
+let _recordSeconds     = 0;
+const MAX_REC_SECS     = 300; // 5-minute hard cap
+
+/** Open video modal, start camera + GPS preview. */
+async function showVideoModal() {
+    document.getElementById('videoModal').classList.add('show');
+    document.getElementById('videoStep1').style.display = '';
+    document.getElementById('videoStep2').style.display = 'none';
+    _recordedBlob   = null;
+    _recordGpsData  = null;
+    _recordedChunks = [];
+    _recordSeconds  = 0;
+    resetRecordUI();
+
+    _recordClientMeta = collectClientMetadata();
+    _enrichWithBattery(_recordClientMeta);  // async  -  battery level
+    _enrichWithUACH(_recordClientMeta);     // async  -  real OS + model via Client Hints
+
+    const chip = document.getElementById('videoDeviceChip');
+    if (chip) chip.textContent = _recordClientMeta.os +
+        (_recordClientMeta.deviceModel ? ` · ${_recordClientMeta.deviceModel}` : '');
+
+    await startVideoCamera();
+    setTimeout(startVideoGeolocation, 800);
+}
+
+/** Close and fully reset the video modal. */
+function hideVideoModal() {
+    stopVideoStream();
+    _stopRecordTimer();
+    document.getElementById('videoModal').classList.remove('show');
+    const form = document.getElementById('videoForm');
+    if (form) form.reset();
+    document.getElementById('videoStep1').style.display = '';
+    document.getElementById('videoStep2').style.display = 'none';
+    const pill = document.getElementById('videoGpsPill');
+    if (pill) { pill.textContent = 'Fetching GPS...'; pill.className = 'gps-pill gps-fetching'; }
+    const timer = document.getElementById('recordTimer');
+    if (timer) timer.textContent = '00:00';
+    resetRecordUI();
+    _recordedBlob  = null;
+    _recordGpsData = null;
+    _recordClientMeta = null;
+    _recordedChunks   = [];
+    _recordSeconds    = 0;
+}
+
+/** Request camera + audio. Rear camera preferred; falls back progressively.
+ *  Detects specific error types and shows actionable messages instead of
+ *  silently swallowing errors (mirrors image-capture permission logic). */
+async function startVideoCamera() {
+    const video  = document.getElementById('videoPreviewLive');
+    const recBtn = document.getElementById('recordBtn');
+    if (!video) return;
+
+    // Hide failed overlay in case of retry
+    const failEl = document.getElementById('videoFailedOverlay');
+    if (failEl) failEl.style.display = 'none';
+    if (video)  video.style.display  = '';
+    if (recBtn) recBtn.style.display = '';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        _showVideoFailed(
+            'Camera not supported by this browser.',
+            'Please use Chrome, Firefox, or Safari on a modern device.'
+        );
+        return;
+    }
+
+    // Progressive fallback: rear+audio → front+audio → any+audio → video-only
+    const constraints = [
+        { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true },
+        { video: { facingMode: 'user' }, audio: true },
+        { video: true, audio: true },
+        { video: true }  // audio-only failure fallback (mic blocked but camera OK)
+    ];
+
+    let lastErr = null;
+    for (const c of constraints) {
+        try {
+            _recordStream = await navigator.mediaDevices.getUserMedia(c);
+            video.srcObject = _recordStream;
+            if (recBtn) recBtn.style.display = '';
+            return;  // success
+        } catch (err) {
+            lastErr = err;
+            // Permission denied = no point trying remaining constraints
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') break;
+        }
+    }
+
+    // Map error type to user-actionable message
+    let msg, hint;
+    if (!lastErr) { return; }  // shouldn't happen
+    switch (lastErr.name) {
+        case 'NotAllowedError':
+        case 'PermissionDeniedError':
+            msg  = 'Camera or microphone access was denied.';
+            hint = 'Open browser settings, find this site under Camera / Microphone permissions, set both to Allow, then reopen this modal.';
+            break;
+        case 'NotFoundError':
+        case 'DevicesNotFoundError':
+            msg  = 'No camera found on this device.';
+            hint = 'Connect a camera or use a device with a built-in camera, then reopen this modal.';
+            break;
+        case 'NotReadableError':
+        case 'TrackStartError':
+            msg  = 'Camera is already in use by another app.';
+            hint = 'Close other apps or browser tabs using the camera (e.g. video calls), then reopen this modal.';
+            break;
+        case 'OverconstrainedError':
+        case 'ConstraintNotSatisfiedError':
+            msg  = 'Camera resolution not supported.';
+            hint = 'Try closing and reopening this modal to attempt with lower resolution settings.';
+            break;
+        default:
+            msg  = 'Camera error: ' + lastErr.name + '.';
+            hint = 'Try reloading the page or using a different browser (Chrome or Firefox recommended).';
+    }
+    _showVideoFailed(msg, hint);
+}
+
+/** Show the camera-failed overlay with a specific message and hint. */
+function _showVideoFailed(msg, hint) {
+    const video  = document.getElementById('videoPreviewLive');
+    const recBtn = document.getElementById('recordBtn');
+    const failEl = document.getElementById('videoFailedOverlay');
+    const msgEl  = document.getElementById('videoFailedMsg');
+    const hintEl = document.getElementById('videoFailedHint');
+    if (video)  video.style.display  = 'none';
+    if (recBtn) recBtn.style.display = 'none';
+    if (failEl) failEl.style.display = '';
+    if (msgEl  && msg)  msgEl.textContent  = msg;
+    if (hintEl && hint) hintEl.textContent = hint;
+}
+
+/** Retry camera after user grants permission (no need to reopen modal). */
+async function retryVideoCamera() {
+    if (_recordStream) {
+        _recordStream.getTracks().forEach(t => t.stop());
+        _recordStream = null;
+    }
+    await startVideoCamera();
+}
+
+/** GPS watchPosition for the video modal. */
+function startVideoGeolocation() {
+    const pill = document.getElementById('videoGpsPill');
+    if (!pill) return;
+
+    if (!navigator.geolocation) {
+        pill.textContent = 'No GPS';
+        pill.className = 'gps-pill gps-denied';
+        return;
+    }
+
+    pill.textContent = 'Fetching GPS...';
+    pill.className   = 'gps-pill gps-fetching';
+
+    if (_recordGeoWatchId !== null) {
+        navigator.geolocation.clearWatch(_recordGeoWatchId);
+        _recordGeoWatchId = null;
+    }
+
+    _recordGeoWatchId = navigator.geolocation.watchPosition(
+        pos => {
+            _recordGpsData = {
+                latitude:      pos.coords.latitude,
+                longitude:     pos.coords.longitude,
+                altitude:      pos.coords.altitude,
+                accuracy_m:    pos.coords.accuracy,
+                heading:       pos.coords.heading,
+                speed:         pos.coords.speed,
+                gps_timestamp: new Date(pos.timestamp).toISOString()
+            };
+            const lat = pos.coords.latitude.toFixed(4);
+            const lng = pos.coords.longitude.toFixed(4);
+            const acc = Math.round(pos.coords.accuracy || 0);
+            pill.textContent = `GPS - ${lat}, ${lng}`;
+            pill.title       = `GPS acquired ±${acc}m`;
+            pill.className   = 'gps-pill gps-acquired';
+            // Hide hint if GPS was previously denied but now granted
+            const hint = document.getElementById('videoGpsSettingsHint');
+            if (hint) hint.style.display = 'none';
+        },
+        err => {
+            pill.textContent = 'GPS denied';
+            pill.className   = 'gps-pill gps-denied';
+            // Show settings hint  -  same pattern as image capture
+            const hint = document.getElementById('videoGpsSettingsHint');
+            if (hint) hint.style.display = 'inline';
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+/** Begin recording. Captures GPS + metadata at record-start (forensic standard). */
+function startRecording() {
+    if (!_recordStream) {
+        alert('Camera not ready. Please wait or reload.');
+        return;
+    }
+
+    _recordedChunks   = [];
+    _recordSeconds    = 0;
+    _recordClientMeta = collectClientMetadata();
+    _enrichWithBattery(_recordClientMeta); // async, background
+
+    // Pick best supported MIME type
+    const mimeTypes = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4'
+    ];
+    let selectedMime = '';
+    for (const m of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(m)) { selectedMime = m; break; }
+    }
+
+    try {
+        _mediaRecorder = new MediaRecorder(_recordStream, selectedMime ? { mimeType: selectedMime } : {});
+    } catch (e) {
+        _mediaRecorder = new MediaRecorder(_recordStream);
+    }
+
+    _mediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) _recordedChunks.push(e.data);
+    };
+
+    _mediaRecorder.onstop = () => {
+        const mime    = _mediaRecorder.mimeType || 'video/webm';
+        _recordedBlob = new Blob(_recordedChunks, { type: mime });
+        showVideoPreviewStep();
+    };
+
+    _mediaRecorder.start(1000); // 1-second timeslice chunks
+
+    // Switch to recording UI
+    document.getElementById('recordBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display   = '';
+    const recInd = document.getElementById('recordingIndicator');
+    if (recInd) recInd.style.display = '';
+
+    // Start elapsed timer
+    _recordTimerInt = setInterval(() => {
+        _recordSeconds++;
+        const m = String(Math.floor(_recordSeconds / 60)).padStart(2, '0');
+        const s = String(_recordSeconds % 60).padStart(2, '0');
+        const timer = document.getElementById('recordTimer');
+        if (timer) timer.textContent = `${m}:${s}`;
+        if (_recordSeconds >= MAX_REC_SECS) stopRecording(); // auto-stop at 5 min
+    }, 1000);
+}
+
+/** Stop recording and transition to preview step. */
+function stopRecording() {
+    if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+        _mediaRecorder.stop();
+    }
+    _stopRecordTimer();
+    resetRecordUI();
+}
+
+function _stopRecordTimer() {
+    if (_recordTimerInt) { clearInterval(_recordTimerInt); _recordTimerInt = null; }
+}
+
+/** Reset record/stop button visibility. */
+function resetRecordUI() {
+    const r = document.getElementById('recordBtn');
+    const s = document.getElementById('stopBtn');
+    const i = document.getElementById('recordingIndicator');
+    if (r) r.style.display = '';
+    if (s) s.style.display = 'none';
+    if (i) i.style.display = 'none';
+}
+
+/** Show Step 2: recorded video preview + metadata strip. */
+function showVideoPreviewStep() {
+    const previewVid = document.getElementById('videoPreviewRecorded');
+    if (previewVid) previewVid.src = URL.createObjectURL(_recordedBlob);
+
+    const gps = _recordGpsData;
+    const cli = _recordClientMeta;
+    const netStr = [cli.connection_type, cli.connection_effectiveType,
+        cli.connection_downlink_mbps ? `${cli.connection_downlink_mbps} Mbps` : null]
+        .filter(Boolean).join(' / ') || 'Unknown';
+    const battStr = cli.battery_level_pct != null
+        ? `${cli.battery_level_pct}% ${cli.battery_charging ? 'Charging' : ''}`
+        : null;
+    const durStr = `${String(Math.floor(_recordSeconds / 60)).padStart(2,'0')}:${String(_recordSeconds % 60).padStart(2,'0')}`;
+
+    const rows = [
+        ['Recorded At', cli.captureTimestamp],
+        ['Duration',    durStr],
+        ['Timezone',    cli.timezone],
+        ['OS',          cli.os || 'Unknown'],
+        cli.deviceModel ? ['Device', cli.deviceModel] : null,
+        ['Network',     netStr],
+        battStr ? ['Battery', battStr] : null,
+        ['GPS at Start', gps
+            ? `${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)} (±${Math.round(gps.accuracy_m || 0)}m)`
+            : 'Not available'],
+    ].filter(Boolean);
+
+    const strip = document.getElementById('videoMetaStrip');
+    if (strip) strip.innerHTML = rows.map(([k, v]) =>
+        `<div class="meta-strip-row">
+            <span class="meta-strip-key">${k}</span>
+            <span class="meta-strip-val">${v}</span>
+         </div>`
+    ).join('');
+
+    const gpsStr = gps
+        ? `GPS: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}`
+        : 'GPS: N/A';
+    const descEl = document.getElementById('vid_description');
+    if (descEl) descEl.value =
+        `Live video  -  ${cli.captureTimestamp}  -  Duration: ${durStr}  -  ${gpsStr}`;
+
+    document.getElementById('videoStep1').style.display = 'none';
+    document.getElementById('videoStep2').style.display = '';
+
+    // Release camera  -  no longer needed after recording
+    if (_recordStream) {
+        _recordStream.getTracks().forEach(t => t.stop());
+        _recordStream = null;
+    }
+    if (_recordGeoWatchId !== null) {
+        navigator.geolocation.clearWatch(_recordGeoWatchId);
+        _recordGeoWatchId = null;
+    }
+}
+
+/** Go back to Step 1 to re-record. */
+function retakeVideo() {
+    _recordedBlob   = null;
+    _recordedChunks = [];
+    _recordSeconds  = 0;
+    document.getElementById('videoStep1').style.display = '';
+    document.getElementById('videoStep2').style.display = 'none';
+    const pill = document.getElementById('videoGpsPill');
+    if (pill) { pill.textContent = 'Fetching GPS...'; pill.className = 'gps-pill gps-fetching'; }
+    const timer = document.getElementById('recordTimer');
+    if (timer) timer.textContent = '00:00';
+    resetRecordUI();
+    startVideoCamera();
+    startVideoGeolocation();
+}
+
+/** Stop all video/audio tracks and GPS watch. */
+function stopVideoStream() {
+    if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+        try { _mediaRecorder.stop(); } catch (e) {}
+    }
+    if (_recordStream) {
+        _recordStream.getTracks().forEach(t => t.stop());
+        _recordStream = null;
+    }
+    if (_recordGeoWatchId !== null) {
+        navigator.geolocation.clearWatch(_recordGeoWatchId);
+        _recordGeoWatchId = null;
+    }
+}
+
+/** Upload recorded video blob + metadata to /api/evidence/create. */
+async function submitVideoCapture(event) {
+    event.preventDefault();
+
+    if (!_recordedBlob) {
+        alert('No video recorded. Please record first.');
+        return;
+    }
+
+    const submitBtn = document.getElementById('videoSubmitBtn');
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Uploading…';
+
+    const metadata = Object.assign({}, _recordClientMeta, {
+        gps:                   _recordGpsData,
+        recordDurationSeconds: _recordSeconds,
+        captureMode:           'live_video_recording'
+    });
+
+    const ext = (_recordedBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
+    const ts  = new Date().toISOString().replace(/[:.]/g, '-');
+
+    const formData = new FormData();
+    formData.append('case_number',    document.getElementById('vid_case_number').value);
+    formData.append('description',    document.getElementById('vid_description').value);
+    formData.append('evidence_type',  'Video');
+    formData.append('client_metadata', JSON.stringify(metadata));
+    formData.append('evidence_file',  _recordedBlob, `live_video_${ts}.${ext}`);
+
+    try {
+        const response = await fetch('/api/evidence/create', { method: 'POST', body: formData });
+        const ct = response.headers.get('content-type');
+        if (!ct || !ct.includes('application/json')) {
+            alert('Session expired. Please log in again.');
+            submitBtn.disabled    = false;
+            submitBtn.textContent = 'Register Evidence';
+            return;
+        }
         const result = await response.json();
         if (response.ok && result.success) {
             window.location.href = `/evidence/${result.evidence_id}`;

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSA 2023 Sec. 63 Certificate  -  {{ evidence.case_number }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { background: #f9fafb; }
+    </style>
+</head>
+<body>
+
+    <!-- Screen-only nav bar (hidden on print) -->
+    <div class="cert-nav">
+        <a href="{{ url_for('evidence_detail', evidence_id=evidence.id) }}" class="btn-secondary">
+            &larr; Back to Evidence
+        </a>
+        <button class="btn-primary" onclick="window.print()">Print / Save PDF</button>
+        <span style="font-size:0.75rem; color:#6b7280; margin-left:0.5rem;">
+            This document is meant to be printed or saved as PDF for submission.
+        </span>
+    </div>
+
+
+
+    <div class="cert-page">
+
+        <!-- Diagonal watermark -->
+        <div class="cert-watermark">CONFIDENTIAL</div>
+
+        <!-- ── Certificate Header ── -->
+        <div class="cert-header">
+            <h1>Certificate of Authenticity of Electronic Evidence</h1>
+            <p class="cert-subtitle">
+                Issued under Section 63 of the Bharatiya Sakshya Adhiniyam, 2023
+                (BSA 2023) &amp; Section 65B of the Indian Evidence Act, 1872 (IEA)
+                as interpreted by the Hon'ble Supreme Court of India in
+                <em>Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal</em>
+                [2020 SCC Online SC 571]
+            </p>
+            <p class="cert-ref">Certificate Reference: {{ cert_ref }}</p>
+        </div>
+
+        <!-- ── Part I: Evidence Identification ── -->
+        <div class="cert-section">
+            <h2>Part I  - Identification of Electronic Record</h2>
+            <div class="cert-row">
+                <span class="cert-key">Case Number</span>
+                <span class="cert-val">{{ evidence.case_number }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Evidence ID</span>
+                <span class="cert-val">{{ evidence.id }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Description</span>
+                <span class="cert-val" style="font-family:inherit;">{{ evidence.description }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Evidence Type</span>
+                <span class="cert-val">{{ evidence.evidence_type }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Current Status</span>
+                <span class="cert-val">{{ evidence.status }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Recorded / Created By</span>
+                <span class="cert-val">{{ evidence.created_by }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Date &amp; Time of Creation</span>
+                <span class="cert-val">{{ evidence.created_at }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Current Custodian</span>
+                <span class="cert-val">{{ evidence.current_custodian }}</span>
+            </div>
+            {% if evidence.file_path %}
+            <div class="cert-row">
+                <span class="cert-key">Stored File Path</span>
+                <span class="cert-val">{{ evidence.file_path }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Part II: Cryptographic Hash Integrity ── -->
+        <div class="cert-section">
+            <h2>Part II  - Cryptographic Integrity (SHA-256)</h2>
+            <p style="font-size:0.8rem; margin-bottom:0.75rem; color:#444;">
+                SHA-256 (Secure Hash Algorithm 256-bit) is a cryptographically secure hash function.
+                Any modification to the evidence file  -  even a single byte  -  produces a completely
+                different hash, making tampering immediately detectable.
+            </p>
+
+            <div class="cert-row">
+                <span class="cert-key">Original Hash (at submission)</span>
+            </div>
+            <div class="cert-hash-block">{{ evidence.original_hash or 'N/A  -  No file attached' }}</div>
+
+            <div class="cert-row" style="margin-top:0.75rem;">
+                <span class="cert-key">Current Hash (at certificate issue)</span>
+            </div>
+            {% if evidence.current_hash == 'FILE_MISSING' %}
+            <div class="cert-hash-block cert-hash-mismatch">FILE NOT FOUND ON DISK</div>
+            {% else %}
+            <div class="cert-hash-block {% if evidence.original_hash != evidence.current_hash %}cert-hash-mismatch{% endif %}">
+                {{ evidence.current_hash or 'N/A' }}
+            </div>
+            {% endif %}
+
+            <div style="margin-top:0.6rem;">
+                {% if evidence.original_hash and evidence.current_hash and evidence.current_hash != 'FILE_MISSING' %}
+                    {% if evidence.original_hash == evidence.current_hash %}
+                    <span class="cert-hash-status-pass">INTEGRITY VERIFIED  - HASH MATCH</span>
+                    <span style="font-size:0.78rem; margin-left:0.5rem; color:#166534;">
+                        The electronic record has not been altered since its registration.
+                    </span>
+                    {% else %}
+                    <span class="cert-hash-status-fail">INTEGRITY FAILURE  - HASH MISMATCH</span>
+                    <span style="font-size:0.78rem; margin-left:0.5rem; color:#991b1b;">
+                        The electronic record may have been altered after registration.
+                    </span>
+                    {% endif %}
+                {% else %}
+                <span style="font-size:0.78rem; color:#6b7280;">Hash verification not applicable for this record.</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── Part III: Device & Capture Metadata ── -->
+        {% if device_metadata %}
+        <div class="cert-section">
+            <h2>Part III  - Device &amp; Capture Particulars</h2>
+            <p style="font-size:0.8rem; margin-bottom:0.75rem; color:#444;">
+                The following metadata was collected at the time of evidence capture by the
+                client device and is stored as part of the electronic record.
+            </p>
+
+            {% if device_metadata.client %}
+            {% set cli = device_metadata.client %}
+            <div class="cert-row">
+                <span class="cert-key">Capture Timestamp (ISO 8601)</span>
+                <span class="cert-val">{{ cli.get('captureTimestamp', 'Not recorded') }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Timezone</span>
+                <span class="cert-val">{{ cli.get('timezone', 'Not recorded') }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Operating System</span>
+                <span class="cert-val">{{ cli.get('os', 'Not recorded') }}</span>
+            </div>
+            {% if cli.get('deviceModel') %}
+            <div class="cert-row">
+                <span class="cert-key">Device Model</span>
+                <span class="cert-val">{{ cli.deviceModel }}</span>
+            </div>
+            {% endif %}
+            {% if cli.get('isMobile') is not none %}
+            <div class="cert-row">
+                <span class="cert-key">Device Type</span>
+                <span class="cert-val">{{ 'Mobile Device' if cli.isMobile else 'Desktop / Laptop' }}</span>
+            </div>
+            {% endif %}
+            {% if cli.get('captureMode') %}
+            <div class="cert-row">
+                <span class="cert-key">Capture Method</span>
+                <span class="cert-val">{{ cli.captureMode | replace('_', ' ') | title }}</span>
+            </div>
+            {% endif %}
+            {% if cli.get('recordDurationSeconds') %}
+            <div class="cert-row">
+                <span class="cert-key">Recording Duration</span>
+                {% set dur = cli.recordDurationSeconds | int %}
+                <span class="cert-val">{{ '%02d' % (dur // 60) }}:{{ '%02d' % (dur % 60) }} (MM:SS)</span>
+            </div>
+            {% endif %}
+            {% if cli.get('userAgent') %}
+            <div class="cert-row">
+                <span class="cert-key">User Agent String</span>
+                <span class="cert-val" style="font-size:0.68rem;">{{ cli.userAgent }}</span>
+            </div>
+            {% endif %}
+
+            {% if cli.gps and cli.gps.get('latitude') is not none %}
+            {% set gps = cli.gps %}
+            <div class="cert-row" style="margin-top:0.4rem;">
+                <span class="cert-key">GPS Coordinates (WGS84)</span>
+                <span class="cert-val">
+                    {{ "%.6f" | format(gps.latitude) }}&deg;N,
+                    {{ "%.6f" | format(gps.longitude) }}&deg;E
+                     - Accuracy: &plusmn;{{ gps.accuracy_m | round | int }}m
+                </span>
+            </div>
+            {% if gps.get('altitude') %}
+            <div class="cert-row">
+                <span class="cert-key">GPS Altitude</span>
+                <span class="cert-val">{{ "%.1f" | format(gps.altitude) }}m above sea level</span>
+            </div>
+            {% endif %}
+            <div class="cert-row">
+                <span class="cert-key">GPS Timestamp (UTC)</span>
+                <span class="cert-val">{{ gps.get('gps_timestamp', 'Not recorded') }}</span>
+            </div>
+            <div class="cert-row">
+                <span class="cert-key">Google Maps Link</span>
+                <span class="cert-val">
+                    https://maps.google.com/?q={{ gps.latitude }},{{ gps.longitude }}
+                </span>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            {% if device_metadata.exif %}
+            {% set exif = device_metadata.exif %}
+            <div style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid #ddd;">
+                <strong style="font-size:0.78rem; color:#1a3a1a;">EXIF Metadata (extracted from image file)</strong>
+            </div>
+            {% if exif.Make or exif.Model %}
+            <div class="cert-row">
+                <span class="cert-key">Camera Device</span>
+                <span class="cert-val">{{ exif.get('Make', '') }} {{ exif.get('Model', '') }}</span>
+            </div>
+            {% endif %}
+            {% if exif.DateTimeOriginal %}
+            <div class="cert-row">
+                <span class="cert-key">EXIF Capture Time</span>
+                <span class="cert-val">{{ exif.DateTimeOriginal }}</span>
+            </div>
+            {% endif %}
+            {% if exif.get('exif_gps_lat') is not none %}
+            <div class="cert-row">
+                <span class="cert-key">EXIF GPS</span>
+                <span class="cert-val">{{ exif.exif_gps_lat }}&deg;, {{ exif.exif_gps_lng }}&deg;</span>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ── Part IV: Chain of Custody Summary ── -->
+        <div class="cert-section">
+            <h2>Part IV  - Chain of Custody Summary</h2>
+            <p style="font-size:0.8rem; margin-bottom:0.75rem; color:#444;">
+                Every action performed on this evidence record is logged with a cryptographic
+                hash chain, ensuring tamper-evident audit trail as required under forensic
+                evidence standards.
+            </p>
+            <table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
+                <thead>
+                    <tr style="background:#f0fdf4; border-bottom:2px solid #bbf7d0;">
+                        <th style="padding:0.4rem 0.6rem; text-align:left; font-weight:700;">#</th>
+                        <th style="padding:0.4rem 0.6rem; text-align:left; font-weight:700;">Action</th>
+                        <th style="padding:0.4rem 0.6rem; text-align:left; font-weight:700;">Performed By</th>
+                        <th style="padding:0.4rem 0.6rem; text-align:left; font-weight:700;">Timestamp</th>
+                        <th style="padding:0.4rem 0.6rem; text-align:left; font-weight:700;">Hash Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in custody_log %}
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:0.35rem 0.6rem; color:#6b7280;">{{ loop.index }}</td>
+                        <td style="padding:0.35rem 0.6rem;">{{ log.action }}</td>
+                        <td style="padding:0.35rem 0.6rem; font-family:'Courier New',monospace;">{{ log.performed_by }}
+                            {% if log.transferred_to %}&rarr; {{ log.transferred_to }}{% endif %}
+                        </td>
+                        <td style="padding:0.35rem 0.6rem; font-family:'Courier New',monospace; font-size:0.7rem;">{{ log.timestamp }}</td>
+                        <td style="padding:0.35rem 0.6rem;">
+                            {% if log.hash_verified %}
+                                {% if 'fail' in log.hash_verified | lower %}
+                                <span style="color:#991b1b; font-weight:700; font-size:0.7rem;">{{ log.hash_verified }}</span>
+                                {% else %}
+                                <span style="color:#166534; font-weight:700; font-size:0.7rem;">{{ log.hash_verified }}</span>
+                                {% endif %}
+                            {% else %}
+                            <span style="color:#9ca3af; font-size:0.7rem;"> - </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" style="padding:0.75rem; text-align:center; color:#9ca3af;">No log entries.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ── Part V: Legal Declaration ── -->
+        <div class="cert-section">
+            <h2>Part V  - Statutory Declaration</h2>
+            <div class="cert-legal-block">
+                <p>
+                    I, <strong>{{ certifier.username }}</strong>, acting in the capacity of
+                    <strong>{{ certifier.role }}</strong> in the Chain of Custody Evidence
+                    Management System, being a person responsible for the management of the
+                    relevant activities and operation of the computer system used to create,
+                    process, and store the above-mentioned electronic record, do hereby certify as follows:
+                </p>
+                <p>
+                    <strong>(a)</strong> The electronic record described in Part I was produced by a
+                    computer that was being used regularly during the relevant period in the
+                    lawful course of investigative activities, and the computer was
+                    functioning properly at all material times;
+                </p>
+                <p>
+                    <strong>(b)</strong> The information contained in the electronic record was
+                    regularly fed into the computer in the ordinary course of the said activities
+                    and derives from information stored or processed by the computer system
+                    in the regular course of those activities;
+                </p>
+                <p>
+                    <strong>(c)</strong> Throughout the material period during which the computer
+                    was used for storing or processing the information, the computer was
+                    operating properly and, in any case, the information was not adversely
+                    affected by any malfunction or improper use of the computer;
+                </p>
+                <p>
+                    <strong>(d)</strong> The SHA-256 cryptographic hash recorded at the time of
+                    submission (Original Hash, Part II) faithfully represents the
+                    digital fingerprint of the evidence file as it existed at the
+                    moment of registration. Any discrepancy between the Original Hash
+                    and the Current Hash indicates post-registration alteration.
+                </p>
+                <p>
+                    This certificate is issued in accordance with:
+                    <strong>Section 63, Bharatiya Sakshya Adhiniyam, 2023</strong>
+                    (BSA 2023)  -  formerly Section 65B of the Indian Evidence Act, 1872  -  and
+                    pursuant to the directions of the Hon'ble Supreme Court of India in
+                    <strong><em>Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal</em>
+                    [2020 SCC Online SC 571 / (2020) 7 SCC 1]</strong>.
+                </p>
+                <p>
+                    The electronic record, together with this certificate and the chain of
+                    custody log, is submitted as admissible secondary evidence under Section
+                    63 of the BSA 2023 and constitutes an "electronic record" as defined under
+                    Section 2(1)(t) of the Information Technology Act, 2000.
+                </p>
+            </div>
+        </div>
+
+        <!-- ── Part VI: Accepted File Formats Note ── -->
+        <div class="cert-section">
+            <h2>Part VI  - Evidence Format &amp; Admissibility Note</h2>
+            <p style="font-size:0.8rem; color:#444; line-height:1.8;">
+                <strong>Images:</strong> JPEG (.jpg / .jpeg) and PNG (.png)  -  widely accepted as
+                photographic evidence in Indian courts. Digital photographs are admissible as
+                documentary evidence (secondary evidence with this certificate).<br>
+                <strong>Video:</strong> MP4 (.mp4 / H.264+AAC), MOV (.mov), and WebM (.webm)  - 
+                accepted as electronic video evidence. MP4 is the recommended format for
+                court submission due to universal playback support. Live recordings generated
+                by this system in WebM format retain full integrity via SHA-256 hash.<br>
+                <strong>Documents:</strong> PDF (.pdf) and plain text (.txt).<br>
+                <strong>Audio:</strong> MP3 (.mp3) and WAV (.wav).
+            </p>
+        </div>
+
+        <!-- Signature + footer: always on the same page -->
+        <div class="cert-sign-footer-wrap">
+
+        <!-- ── Signature Block ── -->
+        <div class="cert-signature-block">
+            <div class="cert-sig-col">
+                <div class="cert-sig-line"></div>
+                <div class="cert-sig-label">
+                    Signature of Certifier<br>
+                    <strong>{{ certifier.username }}</strong> ({{ certifier.role }})<br>
+                    Date of Issue: {{ cert_issued_at }}
+                </div>
+            </div>
+            <div class="cert-sig-col">
+                <div class="cert-sig-line"></div>
+                <div class="cert-sig-label">
+                    Official Seal / Stamp<br>
+                    (Investigating Agency / Court)
+                </div>
+            </div>
+            <div class="cert-sig-col">
+                <div class="cert-sig-line"></div>
+                <div class="cert-sig-label">
+                    Countersignature<br>
+                    (Senior Officer / Magistrate, if required)
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Footer ── -->
+        <div class="cert-footer">
+            Certificate Reference: {{ cert_ref }} &bull;
+            Issued: {{ cert_issued_at }} &bull;
+            Evidence ID: {{ evidence.id }} &bull;
+            Case: {{ evidence.case_number }}<br>
+            This certificate was generated by the Chain of Custody Evidence Management System.
+            It is valid only when accompanied by the original electronic record and its SHA-256 hash.
+            Pursuant to BSA 2023 Sec. 63 | IEA Sec. 65B | IT Act 2000 Sec. 2(1)(t).
+        </div>
+
+        </div><!-- end .cert-sign-footer-wrap -->
+
+    </div><!-- end .cert-page -->
+
+</body>
+</html>

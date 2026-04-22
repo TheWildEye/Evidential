@@ -802,6 +802,21 @@ a {
     gap: 0.5rem;
     flex-wrap: wrap;
     align-items: center;
+    flex-shrink: 0;  /* never let header compress the button group */
+}
+
+/* All three header action buttons share identical sizing */
+.header-actions .btn-primary,
+.header-actions .btn-capture,
+.header-actions .btn-video-record {
+    flex: 1;
+    text-align: center;
+    min-width: 120px;         /* enough room for 'Video Record' text */
+    white-space: nowrap;
+    overflow: visible;        /* never clip text */
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+    line-height: 1.4;
 }
 
 .btn-capture {
@@ -921,7 +936,7 @@ a {
     max-width: 50%;
 }
 
-/* Camera controls bar — dark so shutter button is clearly visible */
+/* Camera controls bar  -  dark so shutter button is clearly visible */
 .camera-controls {
     display: flex;
     justify-content: center;
@@ -997,7 +1012,7 @@ a {
     margin-top: -0.2rem;
 }
 
-/* PRIMARY action — gallery always works, shown first and biggest */
+/* PRIMARY action  -  gallery always works, shown first and biggest */
 .btn-file-pick-primary {
     display: block;
     width: 100%;
@@ -1025,7 +1040,7 @@ a {
     margin: 0.1rem 0;
 }
 
-/* SECONDARY action — retry camera, smaller */
+/* SECONDARY action  -  retry camera, smaller */
 .btn-retry-cam-sm {
     padding: 0.35rem 0.9rem;
     background: transparent;
@@ -1042,7 +1057,7 @@ a {
     background: rgba(59, 130, 246, 0.15);
 }
 
-/* Explicit GPS retry button — shown when GPS is denied */
+/* Explicit GPS retry button  -  shown when GPS is denied */
 .btn-retry-gps {
     display: inline-flex;
     align-items: center;
@@ -1065,7 +1080,7 @@ a {
     border-color: #f59e0b;
 }
 
-/* Retry camera button in controls bar — shown when camera fails */
+/* Retry camera button in controls bar  -  shown when camera fails */
 .btn-retry-cam-bar {
     display: inline-flex;
     align-items: center;
@@ -1087,7 +1102,7 @@ a {
     background: rgba(59, 130, 246, 0.15);
 }
 
-/* GPS pill — status indicator only */
+/* GPS pill  -  status indicator only */
 .gps-pill {
     user-select: none;
     max-width: 58%;
@@ -1097,7 +1112,7 @@ a {
     display: inline-block;
 }
 
-/* Settings hint — own line below pill when GPS denied */
+/* Settings hint  -  own line below pill when GPS denied */
 .gps-settings-hint {
     width: 100%;
     font-size: 0.7rem;
@@ -1235,7 +1250,7 @@ a {
 }
 
 /* ================================================================
-   MOBILE RESPONSIVE — 768px
+   MOBILE RESPONSIVE  -  768px
    ================================================================ */
 
 @media (max-width: 768px) {
@@ -1270,11 +1285,13 @@ a {
     }
 
     .header-actions .btn-primary,
-    .header-actions .btn-capture {
+    .header-actions .btn-capture,
+    .header-actions .btn-video-record {
         flex: 1;
         text-align: center;
-        padding: 0.65rem 0.5rem;
-        font-size: 0.8rem;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
 
     .evidence-grid {
@@ -1329,7 +1346,7 @@ a {
 }
 
 /* ================================================================
-   MOBILE RESPONSIVE — 480px
+   MOBILE RESPONSIVE  -  480px
    ================================================================ */
 
 @media (max-width: 480px) {
@@ -1357,7 +1374,8 @@ a {
         max-height: 260px;
     }
 
-    #captureVideo {
+    #captureVideo,
+    #videoPreviewLive {
         max-height: 260px;
     }
 
@@ -1458,5 +1476,482 @@ a {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.1rem;
+    }
+
+    /* Header buttons at very small screens: ensure text never crops */
+    .header-actions .btn-primary,
+    .header-actions .btn-capture,
+    .header-actions .btn-video-record {
+        min-width: 90px;
+        font-size: 0.7rem;
+        padding: 0.3rem 0.35rem;
+        overflow: visible;
+    }
+}
+
+/* ================================================================
+   VIDEO RECORD BUTTON
+   ================================================================ */
+
+.btn-video-record {
+    padding: 0.5rem 1.1rem;
+    background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: 0 2px 8px rgba(185, 28, 28, .30);
+}
+
+.btn-video-record:hover {
+    background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+    box-shadow: 0 4px 14px rgba(185, 28, 28, .45);
+    transform: translateY(-1px);
+}
+
+/* ================================================================
+   VIDEO RECORDING CONTROLS
+   ================================================================ */
+
+/* Extend camera-controls for video: add timer left of button */
+.video-controls {
+    gap: 1.25rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.record-timer {
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #f1f5f9;
+    letter-spacing: 0.08em;
+    min-width: 3rem;
+    text-align: center;
+}
+
+/* Record button  -  large red circle */
+.btn-record {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #ef4444;
+    box-shadow: 0 0 0 3px #0f1f13, 0 0 0 5px #ef4444, 0 6px 20px rgba(0,0,0,0.55);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s, box-shadow .15s;
+    outline: none;
+}
+
+.btn-record:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px #0f1f13, 0 0 0 5px #f87171, 0 8px 24px rgba(0,0,0,0.65);
+}
+
+.btn-record:active { transform: scale(0.93); }
+
+.record-inner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+    display: block;
+    box-shadow: 0 2px 6px rgba(185,28,28,0.55);
+}
+
+/* Stop button  -  square inside circle */
+.btn-stop-record {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #ef4444;
+    box-shadow: 0 0 0 3px #0f1f13, 0 0 0 5px #ef4444, 0 6px 20px rgba(0,0,0,0.55);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s;
+    outline: none;
+    animation: pulse-border 1.2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 0 3px #0f1f13, 0 0 0 5px #ef4444, 0 6px 20px rgba(0,0,0,0.55); }
+    50%       { box-shadow: 0 0 0 3px #0f1f13, 0 0 0 8px #f87171, 0 6px 24px rgba(239,68,68,0.45); }
+}
+
+.stop-inner {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    background: #ef4444;
+    display: block;
+}
+
+/* Pulsing REC indicator */
+.recording-indicator {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(0,0,0,0.65);
+    border-radius: 100px;
+    padding: 0.22rem 0.65rem 0.22rem 0.45rem;
+    z-index: 20;
+}
+
+.rec-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ef4444;
+    display: inline-block;
+    animation: blink-dot 1s step-start infinite;
+}
+
+@keyframes blink-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+}
+
+.rec-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fca5a5;
+    font-family: 'Courier New', monospace;
+}
+
+/* Video preview (review step) */
+.video-preview-wrap {
+    width: 100%;
+    background: #000;
+    max-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.video-preview-wrap video {
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    display: block;
+}
+
+/* Mobile responsive overrides for video modal */
+@media (max-width: 480px) {
+    .video-preview-wrap,
+    .video-preview-wrap video { max-height: 220px; }
+    .btn-record,
+    .btn-stop-record { width: 56px; height: 56px; }
+    .header-actions .btn-video-record {
+        flex: 1;
+        text-align: center;
+        padding: 0.65rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* ================================================================
+   BSA 2023 / IEA SECTION 65B CERTIFICATE  (print page)
+   ================================================================ */
+
+.cert-page {
+    font-family: 'Times New Roman', Times, serif;
+    color: #111;
+    background: #fff;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2.5rem;
+    border: 2px solid #1a3a1a;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    position: relative;      /* watermark positions relative to this */
+    /* NO overflow:hidden here - that clips the rotated watermark text */
+}
+
+.cert-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-size: 5rem;
+    font-weight: 900;
+    color: rgba(22,163,74,0.14);
+    white-space: nowrap;
+    pointer-events: none;  /* clicks pass straight through */
+    z-index: 100;          /* above everything  -  real watermarks overlay content */
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.cert-header {
+    text-align: center;
+    border-bottom: 2px solid #1a3a1a;
+    padding-bottom: 1.2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.cert-header h1 {
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+}
+
+.cert-header .cert-subtitle {
+    font-size: 0.78rem;
+    color: #444;
+    font-style: italic;
+}
+
+.cert-ref {
+    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+    color: #555;
+    margin-top: 0.3rem;
+}
+
+.cert-section {
+    margin-bottom: 1.4rem;
+    position: relative;
+    z-index: 1;
+}
+
+.cert-section h2 {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.3rem;
+    margin-bottom: 0.7rem;
+    color: #1a3a1a;
+}
+
+.cert-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
+}
+
+.cert-key {
+    min-width: 200px;
+    font-weight: 700;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.cert-val {
+    color: #111;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
+.cert-legal-block {
+    background: #f8fff8;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    padding: 1rem 1.2rem;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+}
+
+.cert-legal-block p { margin-bottom: 0.6rem; }
+.cert-legal-block p:last-child { margin-bottom: 0; }
+
+.cert-hash-block {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    word-break: break-all;
+    color: #111;
+    margin-top: 0.2rem;
+}
+
+.cert-hash-mismatch {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.cert-signature-block {
+    display: flex;
+    gap: 3rem;
+    margin-top: 2.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid #ccc;
+}
+
+.cert-sig-col { flex: 1; }
+
+.cert-sig-line {
+    border-bottom: 1px solid #333;
+    margin-bottom: 0.3rem;
+    height: 2.5rem;
+}
+
+.cert-sig-label {
+    font-size: 0.72rem;
+    color: #555;
+    text-align: center;
+}
+
+/* Signature + footer wrapper: never split across pages */
+.cert-sign-footer-wrap {
+    page-break-inside: avoid;
+    break-inside:      avoid;
+}
+
+.cert-footer {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #777;
+    margin-top: 2rem;
+    border-top: 1px solid #ddd;
+    padding-top: 0.8rem;
+    font-style: italic;
+}
+
+.cert-nav {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+}
+
+.cert-nav .btn-primary,
+.cert-nav .btn-secondary { padding: 0.45rem 1rem; font-size: 0.8rem; }
+
+/* Hash match / fail badges in cert */
+.cert-hash-status-pass {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    background: #dcfce7;
+    color: #166534;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.cert-hash-status-fail {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+@media print {
+    /* ── Page setup ── */
+    @page {
+        size: A4 portrait;
+        margin: 1.5cm 2cm 1.5cm 2cm;
+    }
+
+    /* Hide nav, show watermark */
+    .cert-nav { display: none !important; }
+
+    body {
+        background: #fff !important;
+        font-size: 0.78rem !important; /* slightly smaller for print so more fits per page */
+    }
+
+    .cert-page {
+        margin: 0 !important;
+        border: none !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Reduce section spacing for print */
+    .cert-section {
+        margin-bottom: 0.8rem !important;
+    }
+
+    .cert-header {
+        padding-bottom: 0.75rem !important;
+        margin-bottom: 0.9rem !important;
+    }
+
+    .cert-legal-block {
+        padding: 0.6rem 0.8rem !important;
+    }
+
+    /* ── Critical: never orphan these elements ── */
+
+    /* Keep each section together internally */
+    .cert-section,
+    .cert-legal-block,
+    .cert-hash-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Signature block + footer MUST stay together on same page */
+    .cert-signature-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        page-break-before: avoid;
+        break-before: avoid;
+        margin-top: 1.5rem !important;
+    }
+
+    .cert-footer {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        page-break-before: avoid;
+        break-before: avoid;
+        margin-top: 0.75rem !important;
+    }
+
+    /* Keep Part V (legal declaration section) + signature block together */
+    .cert-section:last-of-type {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+
+    /* Table rows shouldn't split either */
+    tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Watermark visible on ALL printed pages via position:fixed */
+    .cert-watermark {
+        display: block !important;
+        position: fixed !important;  /* fixed = repeats on every page in print */
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) rotate(-35deg) !important;
+        color: rgba(22,163,74,0.13) !important;
+        z-index: 9999 !important;
+        font-size: 6rem !important;
     }
 }

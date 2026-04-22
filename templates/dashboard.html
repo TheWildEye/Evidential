@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evidence Registry — Chain of Custody</title>
+    <title>Evidence Registry  -  Chain of Custody</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <nav class="navbar">
         <div class="nav-brand">
@@ -24,7 +26,8 @@
             {% if user.permissions.create %}
             <div class="header-actions">
                 <button class="btn-primary" onclick="showCreateModal()">+ Register</button>
-                <button class="btn-capture" onclick="showCaptureModal()">📷 Live Capture</button>
+                <button class="btn-capture" onclick="showCaptureModal()">Image Capture</button>
+                <button class="btn-video-record" onclick="showVideoModal()">Video Record</button>
             </div>
             {% endif %}
         </div>
@@ -60,7 +63,7 @@
             {% else %}
             <div class="empty-state">
                 <p>No evidence registered yet.</p>
-                <p class="empty-hint">Use "Register Evidence" or "📷 Live Capture" to add the first entry.</p>
+                <p class="empty-hint">Use "Register Evidence", "Image Capture" or "Video Record" to add the first entry.</p>
             </div>
             {% endif %}
         </div>
@@ -85,7 +88,7 @@
                 <div class="form-group">
                     <label>Evidence Type</label>
                     <select id="evidence_type" required>
-                        <option value="">— Select Type —</option>
+                        <option value=""> -  Select Type  - </option>
                         <option value="Video">Video (MP4, MOV)</option>
                         <option value="Audio">Audio (MP3, WAV)</option>
                         <option value="Image">Image (JPG, PNG)</option>
@@ -97,7 +100,7 @@
                     <label>Evidence File (Optional)</label>
                     <input type="file" id="evidence_file" accept=".txt,.pdf,.mp3,.mp4,.wav,.mov,.jpg,.jpeg,.png" />
                     <small style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.3rem; display:block;">
-                        Accepted: .txt .pdf .mp3 .mp4 .wav .jpg .png — SHA-256 hash computed on upload
+                        Accepted: .txt .pdf .mp3 .mp4 .wav .jpg .png  -  SHA-256 hash computed on upload
                     </small>
                 </div>
                 <div class="modal-actions">
@@ -112,7 +115,7 @@
     <div id="captureModal" class="modal">
         <div class="modal-content modal-capture">
             <div class="modal-header">
-                <h2>Live Evidence Capture</h2>
+                <h2>Image Evidence Capture</h2>
                 <span class="modal-close" onclick="hideCaptureModal()">&times;</span>
             </div>
 
@@ -121,7 +124,8 @@
                 <div class="camera-viewfinder">
                     <video id="captureVideo" autoplay playsinline muted></video>
                     <canvas id="captureCanvas" style="display:none;"></canvas>
-                    <input type="file" id="captureFileFallback" accept="image/*" capture="environment" style="display:none;">
+                    <input type="file" id="captureFileFallback" accept="image/*" capture="environment"
+                        style="display:none;">
                     <div class="viewfinder-overlay">
                         <div class="vf-corner tl"></div>
                         <div class="vf-corner tr"></div>
@@ -139,12 +143,14 @@
 
                 <div class="gps-device-bar">
                     <span id="gpsStatusPill" class="gps-pill gps-fetching">Fetching GPS...</span>
-                    <span id="gpsSettingsHint" class="gps-settings-hint" style="display:none;">Enable location in browser settings</span>
+                    <span id="gpsSettingsHint" class="gps-settings-hint" style="display:none;">Enable location in
+                        browser settings</span>
                     <span id="deviceInfoChip" class="device-chip"></span>
                 </div>
 
                 <div class="camera-controls">
-                    <button type="button" class="btn-shutter" id="shutterBtn" onclick="captureSnapshot()" title="Capture evidence photo">
+                    <button type="button" class="btn-shutter" id="shutterBtn" onclick="captureSnapshot()"
+                        title="Capture evidence photo">
                         <span class="shutter-inner"></span>
                     </button>
                 </div>
@@ -165,7 +171,8 @@
                     </div>
                     <div class="form-group">
                         <label>Description</label>
-                        <textarea id="cap_description" rows="2" placeholder="Brief description of captured evidence"></textarea>
+                        <textarea id="cap_description" rows="2"
+                            placeholder="Brief description of captured evidence"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Evidence Type</label>
@@ -183,6 +190,79 @@
         </div>
     </div>
 
+
+    <!-- ========== Live Video Record Modal ========== -->
+    <div id="videoModal" class="modal">
+        <div class="modal-content modal-capture">
+            <div class="modal-header">
+                <h2>Live Video Record</h2>
+                <span class="modal-close" onclick="hideVideoModal()">&times;</span>
+            </div>
+
+            <!-- Step 1: Live camera preview + record controls -->
+            <div id="videoStep1">
+                <div class="camera-viewfinder">
+                    <video id="videoPreviewLive" autoplay playsinline muted></video>
+                    <div class="viewfinder-overlay">
+                        <div class="vf-corner tl"></div>
+                        <div class="vf-corner tr"></div>
+                        <div class="vf-corner bl"></div>
+                        <div class="vf-corner br"></div>
+                    </div>
+                    <!-- Pulsing REC indicator -->
+                    <div id="recordingIndicator" class="recording-indicator" style="display:none;">
+                        <span class="rec-dot"></span>
+                        <span class="rec-label">REC</span>
+                    </div>
+                    <!-- Camera failed overlay: shown with specific error + settings hint -->
+                    <div id="videoFailedOverlay" class="camera-failed-overlay" style="display:none;">
+                        <p id="videoFailedMsg" class="cam-fail-msg">Camera unavailable or not permitted</p>
+                        <p id="videoFailedHint" class="cam-gps-note">Enable camera and microphone access in browser settings, then reopen this modal.</p>
+                    </div>
+                </div>
+
+                <div class="gps-device-bar">
+                    <span id="videoGpsPill" class="gps-pill gps-fetching">Fetching GPS...</span>
+                    <span id="videoGpsSettingsHint" class="gps-settings-hint" style="display:none;">Enable location in browser settings</span>
+                    <span id="videoDeviceChip" class="device-chip"></span>
+                </div>
+
+                <div class="camera-controls video-controls">
+                    <span id="recordTimer" class="record-timer">00:00</span>
+                    <button type="button" id="recordBtn" class="btn-record" onclick="startRecording()" title="Start recording">
+                        <span class="record-inner"></span>
+                    </button>
+                    <button type="button" id="stopBtn" class="btn-stop-record" onclick="stopRecording()" title="Stop recording" style="display:none;">
+                        <span class="stop-inner"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Recorded video preview + registration form -->
+            <div id="videoStep2" style="display:none;">
+                <div class="video-preview-wrap">
+                    <video id="videoPreviewRecorded" controls></video>
+                </div>
+                <div class="captured-meta-strip" id="videoMetaStrip"></div>
+                <form id="videoForm" onsubmit="submitVideoCapture(event)">
+                    <div class="form-group">
+                        <label>Case Number *</label>
+                        <input type="text" id="vid_case_number" required placeholder="e.g., CASE-2026-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="vid_description" rows="2" placeholder="Brief description of recorded evidence"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="retakeVideo()">Re-record</button>
+                        <button type="submit" class="btn-primary" id="videoSubmitBtn">Register Evidence</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>
