@@ -843,7 +843,7 @@ a {
    ================================================================ */
 
 .modal-capture {
-    max-width: 560px;
+    max-width: 600px;
     overflow: hidden;
 }
 
@@ -851,16 +851,18 @@ a {
     position: relative;
     background: #000;
     overflow: hidden;
-    max-height: 320px;
+    height: 460px;       /* fixed height so viewfinder is large enough to frame clearly */
+    max-height: 60vh;   /* never overflow on short screens */
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-#captureVideo {
+#captureVideo,
+#videoPreviewLive {
     width: 100%;
-    height: auto;
-    max-height: 320px;
+    height: 100%;
+    max-height: 60vh;
     object-fit: cover;
     display: block;
 }
@@ -1371,12 +1373,13 @@ a {
     }
 
     .camera-viewfinder {
-        max-height: 260px;
+        height: 300px;
+        max-height: 50vh;
     }
 
     #captureVideo,
     #videoPreviewLive {
-        max-height: 260px;
+        max-height: 50vh;
     }
 
     .capture-preview-wrap {
@@ -1635,7 +1638,7 @@ a {
 .video-preview-wrap {
     width: 100%;
     background: #000;
-    max-height: 300px;
+    max-height: 380px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1644,7 +1647,7 @@ a {
 
 .video-preview-wrap video {
     width: 100%;
-    max-height: 300px;
+    max-height: 380px;
     object-fit: contain;
     display: block;
 }
