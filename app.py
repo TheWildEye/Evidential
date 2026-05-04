@@ -248,11 +248,12 @@ def create_evidence():
             if 'evidence_file' in request.files:
                 file = request.files['evidence_file']
                 if file.filename:
-                    from datetime import datetime as dt
+                    from datetime import datetime as dt, timezone, timedelta
+                    _IST = timezone(timedelta(hours=5, minutes=30))
                     filename = secure_filename(file.filename)
                     case_slug = secure_filename(data.get('case_number', 'UNKNOWN'))
                     name_slug = secure_filename(data.get('description', 'evidence'))[:30]
-                    timestamp_str = dt.now().strftime('%Y%m%d_%H%M%S')
+                    timestamp_str = dt.now(_IST).strftime('%Y%m%d_%H%M%S')
                     folder_name = f"{case_slug}_{name_slug}_{timestamp_str}"
                     upload_folder = os.path.join('evidence_files', folder_name)
 
@@ -420,9 +421,10 @@ def evidence_certificate(evidence_id):
         except (json.JSONDecodeError, TypeError):
             pass
 
-    from datetime import datetime as dt
-    cert_issued_at = dt.now().strftime('%d %B %Y, %H:%M:%S IST')
-    cert_ref = f"COC-CERT-{evidence_id:06d}-{dt.now().strftime('%Y%m%d%H%M%S')}"
+    from datetime import datetime as dt, timezone, timedelta
+    _IST = timezone(timedelta(hours=5, minutes=30))
+    cert_issued_at = dt.now(_IST).strftime('%d %B %Y, %H:%M:%S IST')
+    cert_ref = f"COC-CERT-{evidence_id:06d}-{dt.now(_IST).strftime('%Y%m%d%H%M%S')}"
 
     return render_template('certificate.html',
                            evidence=evidence,

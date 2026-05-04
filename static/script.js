@@ -460,9 +460,11 @@ async function startCamera() {
     }
 
     // Try rear camera first (environment), fall back to any camera
+    // Request highest resolution available for forensic-grade image capture
     const constraints = [
+        { video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } },
         { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
-        { video: { facingMode: 'user' } },
+        { video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } } },
         { video: true }
     ];
 
@@ -513,7 +515,7 @@ function captureSnapshot() {
     canvas.toBlob(blob => {
         _capturedBlob = blob;
         showPreviewStep();
-    }, 'image/jpeg', 0.92);
+    }, 'image/jpeg', 0.95);  // High quality for forensic evidence — preserves fine detail
 }
 
 /** Transition to Step 2: preview + metadata strip + form. */
@@ -737,9 +739,11 @@ async function startVideoCamera() {
     }
 
     // Progressive fallback: rear+audio → front+audio → any+audio → video-only
+    // Full 1080p @ 30fps for forensic-grade evidence capture
     const constraints = [
-        { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true },
-        { video: { facingMode: 'user' }, audio: true },
+        { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: true },
+        { video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: true },
+        { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: true },
         { video: true, audio: true },
         { video: true }  // audio-only failure fallback (mic blocked but camera OK)
     ];
@@ -874,11 +878,14 @@ function startRecording() {
     _recordSeconds    = 0;
     _recordClientMeta = collectClientMetadata();
     _enrichWithBattery(_recordClientMeta); // async, background
+    _enrichWithUACH(_recordClientMeta);    // async - real OS + model via Client Hints
 
     // Pick best supported MIME type
+    // Prefer VP8 over VP9: VP9 gives better compression but is far too CPU-heavy
+    // for real-time encoding on most mobile devices, causing frame drops and lag.
     const mimeTypes = [
-        'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp8',
         'video/webm',
         'video/mp4'
     ];
@@ -887,10 +894,24 @@ function startRecording() {
         if (MediaRecorder.isTypeSupported(m)) { selectedMime = m; break; }
     }
 
+    // Explicit bitrate: high enough for crisp 1080p forensic evidence, capped to
+    // prevent the browser's unconstrained default (can be 8-10 Mbps) from causing
+    // memory bloat and GC stalls during long recordings.
+    const recorderOpts = {
+        videoBitsPerSecond:  4_000_000,  // 4 Mbps – sharp 1080p, comparable to phone camera quality
+        audioBitsPerSecond:    192_000   // 192 Kbps – clear, detailed audio
+    };
+    if (selectedMime) recorderOpts.mimeType = selectedMime;
+
     try {
-        _mediaRecorder = new MediaRecorder(_recordStream, selectedMime ? { mimeType: selectedMime } : {});
+        _mediaRecorder = new MediaRecorder(_recordStream, recorderOpts);
     } catch (e) {
-        _mediaRecorder = new MediaRecorder(_recordStream);
+        // Fallback without bitrate hints if browser rejects them
+        try {
+            _mediaRecorder = new MediaRecorder(_recordStream, selectedMime ? { mimeType: selectedMime } : {});
+        } catch (_) {
+            _mediaRecorder = new MediaRecorder(_recordStream);
+        }
     }
 
     _mediaRecorder.ondataavailable = e => {
@@ -903,7 +924,7 @@ function startRecording() {
         showVideoPreviewStep();
     };
 
-    _mediaRecorder.start(1000); // 1-second timeslice chunks
+    _mediaRecorder.start(2000); // 2-second timeslice: fewer chunks = less GC pressure
 
     // Switch to recording UI
     document.getElementById('recordBtn').style.display = 'none';
@@ -925,6 +946,9 @@ function startRecording() {
 /** Stop recording and transition to preview step. */
 function stopRecording() {
     if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+        // Flush any buffered encoded frames before stopping — prevents
+        // incomplete last chunk which causes choppy final seconds in playback
+        try { _mediaRecorder.requestData(); } catch (_) {}
         _mediaRecorder.stop();
     }
     _stopRecordTimer();
@@ -948,7 +972,19 @@ function resetRecordUI() {
 /** Show Step 2: recorded video preview + metadata strip. */
 function showVideoPreviewStep() {
     const previewVid = document.getElementById('videoPreviewRecorded');
-    if (previewVid) previewVid.src = URL.createObjectURL(_recordedBlob);
+    if (previewVid) {
+        // Revoke previous blob URL to prevent memory leak on re-records
+        if (previewVid._blobUrl) URL.revokeObjectURL(previewVid._blobUrl);
+
+        const url = URL.createObjectURL(_recordedBlob);
+        previewVid._blobUrl = url;
+        previewVid.preload  = 'auto';  // buffer the full blob before playback
+        previewVid.src      = url;
+
+        // Wait until browser has buffered enough for smooth playback
+        // before showing the preview step — prevents choppy first play
+        previewVid.load();
+    }
 
     const gps = _recordGpsData;
     const cli = _recordClientMeta;

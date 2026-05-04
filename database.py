@@ -1,7 +1,10 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import hashlib
 import os
+
+# Indian Standard Time (UTC+05:30) — used for all timestamps
+IST = timezone(timedelta(hours=5, minutes=30))
 
 
 PERMISSIONS = {
@@ -118,7 +121,7 @@ class Database:
     @staticmethod
     def generate_evidence_hash(case_number, description, evidence_type):
         """Generate SHA-256 hash for evidence"""
-        data = f"{case_number}|{description}|{evidence_type}|{datetime.now().isoformat()}"
+        data = f"{case_number}|{description}|{evidence_type}|{datetime.now(IST).isoformat()}"
         return hashlib.sha256(data.encode()).hexdigest()
 
     @staticmethod
@@ -172,7 +175,7 @@ class Database:
         else:
             evidence_hash = self.generate_evidence_hash(case_number, description, evidence_type)
         
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(IST).isoformat()
         
         cursor.execute('''
             INSERT INTO evidence (case_number, description, evidence_type,
@@ -262,7 +265,7 @@ class Database:
         row = cursor.fetchone()
         previous_hash = row['chain_hash'] if row and row['chain_hash'] else 'GENESIS'
 
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(IST).isoformat()
         chain_hash = self.compute_chain_hash(
             evidence_id, action, performed_by, timestamp, previous_hash, notes
         )
